@@ -1,8 +1,8 @@
-set(TargetName ${CMAKE_PROJECT_NAME})
+set(MainTargetName ${CMAKE_PROJECT_NAME})
 
-add_executable(${TargetName} main.cpp)
+add_executable(${MainTargetName} main.cpp)
 
-target_link_libraries(${TargetName} 
+target_link_libraries(${MainTargetName} 
         PRIVATE
             config
             AllLibraries
