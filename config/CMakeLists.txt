@@ -11,8 +11,8 @@ add_library(${ConfigTargetName} INTERFACE
 )
 
 target_include_directories(${ConfigTargetName}
-    INTERFACE
-        ${PROJECT_BINARY_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        INTERFACE
+            ${PROJECT_BINARY_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 

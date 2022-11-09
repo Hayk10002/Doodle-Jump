@@ -6,6 +6,7 @@ target_link_libraries(${MainTargetName}
         PRIVATE
             config
             AllLibraries
+            drawables
 )
 
 if(USE_SFML)
