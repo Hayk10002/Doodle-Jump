@@ -10,8 +10,6 @@ int main()
 	sf::Texture background_texture;
 	background_texture.loadFromFile(RESOURCE_PATH"background.png");
 	ImageBackground ib(background_texture, { window.getView().getCenter() - window.getView().getSize() / 2.f, window.getView().getSize() });
-	ib.setRotation(65);
-	ib.setScale(1, 3);
 	while (window.isOpen())
 	{
 		sf::Event event;
@@ -22,9 +20,8 @@ int main()
 			if (event.type == sf::Event::Resized)
 			{
 				sf::View v(sf::FloatRect(0, 0, event.size.width, event.size.height));
-				ib.setBackgroundCoveringArea({ v.getCenter() - v.getSize() / 2.f, v.getSize() });
-				v.setSize(v.getSize()*5.f);
 				window.setView(v);
+				ib.setBackgroundCoveringArea({ window.getView().getCenter() - window.getView().getSize() / 2.f, window.getView().getSize() });
 			}
 			if (event.type == sf::Event::KeyPressed)
 			{
