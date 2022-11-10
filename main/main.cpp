@@ -1,8 +1,13 @@
 #include <functional>
+
 #include <SFML/Graphics.hpp>
+
 #include <imgui.h>
 #include <SFML/imgui-SFML.h>
+
 #include <Thor/Input.hpp>
+#include <Thor/Resources.hpp>
+
 #include <DoodleJumpConfig.hpp>
 #include <drawables/ImageBackground.hpp>
 
@@ -24,9 +29,9 @@ int main()
 	window.setFramerateLimit(60);
 	ImGui::SFML::Init(window);
 
-	sf::Texture background_texture;
-	background_texture.loadFromFile(RESOURCES_PATH"background.png");
-	ImageBackground ib(background_texture, &window);
+	thor::ResourceHolder <sf::Texture, std::string> textures_holder;
+	textures_holder.acquire("background", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"background.png"));
+	ImageBackground ib(textures_holder["background"], &window);
 
 	
 	thor::ActionMap<UserActions> action_map;
