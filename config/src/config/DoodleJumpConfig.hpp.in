@@ -1,3 +1,3 @@
 #define DOODLE_JUMP_VERSION_MAJOR @DoodleJump_VERSION_MAJOR@
 #define DOODLE_JUMP_VERSION_MINOR @DoodleJump_VERSION_MINOR@
-#define RESOURCE_PATH "@ResourceDirectoryPath@/"
+#define RESOURCES_PATH "@ResourceDirectoryPath@/"
