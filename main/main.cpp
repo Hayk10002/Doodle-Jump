@@ -10,6 +10,7 @@
 
 #include <DoodleJumpConfig.hpp>
 #include <drawables/ImageBackground.hpp>
+#include <gameObjects/Player.hpp>
 
 
 enum class UserActions
@@ -26,17 +27,20 @@ enum class UserActions
 
 int main()
 {
+	//setup the window
 	sf::RenderWindow window(sf::VideoMode(600, 800), "Doodle Jump");
 	window.setFramerateLimit(60);
 
+	//setup Dear ImGui
 	ImGui::SFML::Init(window);
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
 
+	//setup thor resource manager, create the background
 	thor::ResourceHolder <sf::Texture, std::string> textures_holder;
 	textures_holder.acquire("background", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"background.jpg"));
 	ImageBackground ib(textures_holder["background"], &window);
-
 	
+	//setup the user actions
 	thor::ActionMap<UserActions> action_map;
 	action_map[UserActions::Close] = thor::Action(sf::Event::Closed);
 	action_map[UserActions::Resize] = thor::Action(sf::Event::Resized);
@@ -49,6 +53,8 @@ int main()
 	action_map[UserActions::Rotate] =
 		thor::Action(sf::Keyboard::Q) ||
 		thor::Action(sf::Keyboard::E);
+
+	//callback functions for user actions
 
 	std::function<void(thor::ActionContext<UserActions>)> onResize = [&window](thor::ActionContext<UserActions> context)
 	{
@@ -91,16 +97,19 @@ int main()
 		
 	};
 
+	//bind callbacks to actions
 	thor::ActionMap<UserActions>::CallbackSystem callback_system;
 	callback_system.connect(UserActions::Resize, onResize);
 	callback_system.connect(UserActions::Zoom, onZoom);
 	callback_system.connect0(UserActions::Move, onMove);
 	callback_system.connect0(UserActions::Rotate, onRotate);
 
+	//frame clock
 	sf::Clock deltaClock;
 
 	while (window.isOpen())
 	{
+		//event handling
 		action_map.clearEvents();
 		sf::Event event;
 		while (window.pollEvent(event))
@@ -125,6 +134,7 @@ int main()
 			}
 		}
 
+		//updating
 		if (action_map.isActive(UserActions::Close)) window.close();
 		action_map.invokeCallbacks(callback_system, &window);
 
@@ -136,6 +146,7 @@ int main()
 		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
 		ImGui::End();
 
+		//drawing
 		window.clear();
 		window.draw(ib);
 		ImGui::SFML::Render(window);

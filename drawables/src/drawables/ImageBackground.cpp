@@ -44,12 +44,14 @@ ImageBackground::ImageBackground(sf::Texture& texture, sf::RenderTarget* backgro
 
 void ImageBackground::update()
 {
+	//computes the transformation of this object, without counting the position
 	sf::Transform tr_no_move;
 	tr_no_move.translate(getOrigin());
 	tr_no_move.scale(getScale().x, getScale().y);
 	tr_no_move.rotate(getRotation());
 	sf::Transform inv_tr_no_move = tr_no_move.getInverse();
 
+	//moves the object in the way that there are no visual changes but the position is closer to zero
 	sf::Vector2f curr_pos = getPosition();
 	curr_pos = inv_tr_no_move.transformPoint(curr_pos);
 	curr_pos.x = std::fmodf(curr_pos.x, m_texture_rect.width);
@@ -57,6 +59,7 @@ void ImageBackground::update()
 	curr_pos = tr_no_move.transformPoint(curr_pos);
 	setPosition(curr_pos);
 
+	//transforms the corner points of the background area to the image "space"
 	sf::Transform inv_tr = getInverseTransform();
 	auto [background_covering_area, background_covering_area_rotation] = m_get_background_covering_area();
 	sf::Transform tr;
@@ -73,6 +76,7 @@ void ImageBackground::update()
 		inv_tr.transformPoint({background_covering_area.left, background_covering_area.top + background_covering_area.height})
 	};
 
+	//computes where to draw the image and how many of them needed to cover the 4 corners 
 	int top = int(corners[0].y / m_texture_rect.height - 1);
 	int bottom = int(corners[0].y / m_texture_rect.height + 1);
 	int left = int(corners[0].x / m_texture_rect.width - 1);
