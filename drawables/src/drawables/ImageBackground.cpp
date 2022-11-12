@@ -58,25 +58,27 @@ void ImageBackground::update()
 	setPosition(curr_pos);
 
 	sf::Transform inv_tr = getInverseTransform();
-	sf::FloatRect background_covering_area = m_get_background_covering_area();
+	auto [background_covering_area, background_covering_area_rotation] = m_get_background_covering_area();
+	sf::Transform tr;
+	tr.rotate(background_covering_area_rotation);
 	sf::Vector2f corners[4] =
 	{
-		inv_tr.transformPoint({ background_covering_area.left, background_covering_area.top }),
-		inv_tr.transformPoint({background_covering_area.left + background_covering_area.width, background_covering_area.top}),
-		inv_tr.transformPoint({background_covering_area.left + background_covering_area.width, background_covering_area.top + background_covering_area.height}),
-		inv_tr.transformPoint({background_covering_area.left, background_covering_area.top + background_covering_area.height})
+		(inv_tr * tr).transformPoint({ background_covering_area.left, background_covering_area.top }),
+		(inv_tr * tr).transformPoint({background_covering_area.left + background_covering_area.width, background_covering_area.top}),
+		(inv_tr * tr).transformPoint({background_covering_area.left + background_covering_area.width, background_covering_area.top + background_covering_area.height}),
+		(inv_tr * tr).transformPoint({background_covering_area.left, background_covering_area.top + background_covering_area.height})
 	};
 
-	int top = int(corners[0].y / m_texture_rect.height - 1);
-	int bottom = int(corners[0].y / m_texture_rect.height + 1);
-	int left = int(corners[0].x / m_texture_rect.width - 1);
-	int right = int(corners[0].x / m_texture_rect.width + 1);
+	int top = int(corners[0].y / m_texture_rect.height - 3);
+	int bottom = int(corners[0].y / m_texture_rect.height + 3);
+	int left = int(corners[0].x / m_texture_rect.width - 3);
+	int right = int(corners[0].x / m_texture_rect.width + 3);
 	for (int i = 1; i < 4; i++)
 	{
-		top = std::min(top, int(corners[i].y / m_texture_rect.height - 1));
-		bottom = std::max(bottom, int(corners[i].y / m_texture_rect.height + 1));
-		left = std::min(left, int(corners[i].x / m_texture_rect.width - 1));
-		right = std::max(right, int(corners[i].x / m_texture_rect.width + 1));
+		top = std::min(top, int(corners[i].y / m_texture_rect.height - 3));
+		bottom = std::max(bottom, int(corners[i].y / m_texture_rect.height + 3));
+		left = std::min(left, int(corners[i].x / m_texture_rect.width - 3));
+		right = std::max(right, int(corners[i].x / m_texture_rect.width + 3));
 	}
 
 	m_needed_sprites.top = top;
@@ -133,7 +135,12 @@ sf::IntRect ImageBackground::getTextureRect() const
 
 sf::FloatRect ImageBackground::getBackgroundCoveringArea() const
 {
-	return m_get_background_covering_area();
+	return m_get_background_covering_area().first;
+}
+
+float ImageBackground::getBackgroundCoveringAreaRotation() const
+{
+	return m_get_background_covering_area().second;
 }
 
 sf::Color ImageBackground::getColor() const
@@ -144,9 +151,9 @@ sf::Color ImageBackground::getColor() const
 void ImageBackground::setBackgroundSetGetters(sf::FloatRect background_covering_area)
 {
 	m_background_covering_area = background_covering_area;
-	m_get_background_covering_area = [&]()
+	m_get_background_covering_area = [=]()
 	{
-		return m_background_covering_area;
+		return std::pair{ m_background_covering_area, 0.f };
 	};
 
 	m_set_background_covering_area = [&](sf::FloatRect bca)
@@ -160,7 +167,7 @@ void ImageBackground::setBackgroundSetGetters(sf::FloatRect* background_covering
 	m_background_covering_area_ptr = background_covering_area_ptr;
 	m_get_background_covering_area = [=]()
 	{
-		return *m_background_covering_area_ptr;
+		return std::pair{ *m_background_covering_area_ptr, 0.f };
 	};
 
 	m_set_background_covering_area = [](sf::FloatRect) {};
@@ -171,7 +178,7 @@ void ImageBackground::setBackgroundSetGetters(sf::RenderTarget* background_targe
 	m_background_target_ptr = background_target_ptr;
 	m_get_background_covering_area = [=]()
 	{
-		return sf::FloatRect{ m_background_target_ptr->getView().getCenter() - m_background_target_ptr->getView().getSize() / 2.f, m_background_target_ptr->getView().getSize() };
+		return std::pair{ sf::FloatRect{ m_background_target_ptr->getView().getCenter() - m_background_target_ptr->getView().getSize() / 2.f, m_background_target_ptr->getView().getSize() }, m_background_target_ptr->getView().getRotation()};
 	};
 
 	m_set_background_covering_area = [](sf::FloatRect) {};
