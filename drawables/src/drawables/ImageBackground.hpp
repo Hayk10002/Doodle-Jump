@@ -27,7 +27,6 @@ public:
 	const sf::Texture& getTexture() const;
 	sf::IntRect getTextureRect() const;
 	sf::FloatRect getBackgroundCoveringArea() const;
-	float getBackgroundCoveringAreaRotation() const;
 	sf::Color getColor() const;
 
 private:
@@ -36,7 +35,7 @@ private:
 	sf::IntRect m_texture_rect;
 
 
-	std::function<std::pair<sf::FloatRect, float>()> m_get_background_covering_area;
+	std::function<sf::FloatRect()> m_get_background_covering_area;
 	std::function<void(sf::FloatRect)> m_set_background_covering_area;
 	sf::FloatRect m_background_covering_area;
 	sf::FloatRect* m_background_covering_area_ptr{ nullptr };
