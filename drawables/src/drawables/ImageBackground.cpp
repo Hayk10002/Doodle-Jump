@@ -60,25 +60,29 @@ void ImageBackground::update()
 	sf::Transform inv_tr = getInverseTransform();
 	auto [background_covering_area, background_covering_area_rotation] = m_get_background_covering_area();
 	sf::Transform tr;
+	tr.translate(background_covering_area.left + background_covering_area.width / 2.f, background_covering_area.top + background_covering_area.height / 2.0);
 	tr.rotate(background_covering_area_rotation);
+	tr.translate(-background_covering_area.left - background_covering_area.width / 2.f, -background_covering_area.top - background_covering_area.height / 2.0);
+
+	background_covering_area = tr.transformRect(background_covering_area);
 	sf::Vector2f corners[4] =
 	{
-		(inv_tr * tr).transformPoint({ background_covering_area.left, background_covering_area.top }),
-		(inv_tr * tr).transformPoint({background_covering_area.left + background_covering_area.width, background_covering_area.top}),
-		(inv_tr * tr).transformPoint({background_covering_area.left + background_covering_area.width, background_covering_area.top + background_covering_area.height}),
-		(inv_tr * tr).transformPoint({background_covering_area.left, background_covering_area.top + background_covering_area.height})
+		inv_tr.transformPoint({ background_covering_area.left, background_covering_area.top }),
+		inv_tr.transformPoint({background_covering_area.left + background_covering_area.width, background_covering_area.top}),
+		inv_tr.transformPoint({background_covering_area.left + background_covering_area.width, background_covering_area.top + background_covering_area.height}),
+		inv_tr.transformPoint({background_covering_area.left, background_covering_area.top + background_covering_area.height})
 	};
 
-	int top = int(corners[0].y / m_texture_rect.height - 3);
-	int bottom = int(corners[0].y / m_texture_rect.height + 3);
-	int left = int(corners[0].x / m_texture_rect.width - 3);
-	int right = int(corners[0].x / m_texture_rect.width + 3);
+	int top = int(corners[0].y / m_texture_rect.height - 1);
+	int bottom = int(corners[0].y / m_texture_rect.height + 1);
+	int left = int(corners[0].x / m_texture_rect.width - 1);
+	int right = int(corners[0].x / m_texture_rect.width + 1);
 	for (int i = 1; i < 4; i++)
 	{
-		top = std::min(top, int(corners[i].y / m_texture_rect.height - 3));
-		bottom = std::max(bottom, int(corners[i].y / m_texture_rect.height + 3));
-		left = std::min(left, int(corners[i].x / m_texture_rect.width - 3));
-		right = std::max(right, int(corners[i].x / m_texture_rect.width + 3));
+		top = std::min(top, int(corners[i].y / m_texture_rect.height - 1));
+		bottom = std::max(bottom, int(corners[i].y / m_texture_rect.height + 1));
+		left = std::min(left, int(corners[i].x / m_texture_rect.width - 1));
+		right = std::max(right, int(corners[i].x / m_texture_rect.width + 1));
 	}
 
 	m_needed_sprites.top = top;
