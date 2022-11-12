@@ -18,7 +18,8 @@ enum class UserActions
 	Close,
 	Resize,
 	Zoom,
-	Move
+	Move,
+	Rotate
 };
 
 
@@ -27,10 +28,12 @@ int main()
 {
 	sf::RenderWindow window(sf::VideoMode(600, 800), "Doodle Jump");
 	window.setFramerateLimit(60);
+
 	ImGui::SFML::Init(window);
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
 
 	thor::ResourceHolder <sf::Texture, std::string> textures_holder;
-	textures_holder.acquire("background", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"background.png"));
+	textures_holder.acquire("background", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"background.jpg"));
 	ImageBackground ib(textures_holder["background"], &window);
 
 	
@@ -43,6 +46,9 @@ int main()
 		thor::Action(sf::Keyboard::D) ||
 		thor::Action(sf::Keyboard::W) ||
 		thor::Action(sf::Keyboard::S);
+	action_map[UserActions::Rotate] =
+		thor::Action(sf::Keyboard::Q) ||
+		thor::Action(sf::Keyboard::E);
 
 	std::function<void(thor::ActionContext<UserActions>)> onResize = [&window](thor::ActionContext<UserActions> context)
 	{
@@ -73,10 +79,23 @@ int main()
 		*/
 	};
 
+	std::function<void()> onRotate = [&window]()
+	{
+		/*if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) ib.rotate(1);
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::E)) ib.rotate(-1);*/
+		
+		sf::View v = window.getView();
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) v.rotate(-1);
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::E)) v.rotate(1);
+		window.setView(v);
+		
+	};
+
 	thor::ActionMap<UserActions>::CallbackSystem callback_system;
 	callback_system.connect(UserActions::Resize, onResize);
 	callback_system.connect(UserActions::Zoom, onZoom);
 	callback_system.connect0(UserActions::Move, onMove);
+	callback_system.connect0(UserActions::Rotate, onRotate);
 
 	sf::Clock deltaClock;
 
@@ -114,7 +133,7 @@ int main()
 		ImGui::SFML::Update(window, deltaClock.restart());
 
 		ImGui::Begin("Info");
-		ImGui::Text("Background Position %f, %f", ib.getPosition().x, ib.getPosition().y);
+		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
 		ImGui::End();
 
 		window.clear();
