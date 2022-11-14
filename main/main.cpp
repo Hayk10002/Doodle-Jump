@@ -8,6 +8,7 @@
 #include <Thor/Input.hpp>
 #include <Thor/Resources.hpp>
 
+#include <common/Resources.hpp>
 #include <DoodleJumpConfig.hpp>
 #include <drawables/ImageBackground.hpp>
 #include <gameObjects/Player.hpp>
@@ -35,9 +36,10 @@ int main()
 	ImGui::SFML::Init(window);
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
 
-	//setup thor resource manager, create the background
-	thor::ResourceHolder <sf::Texture, std::string> textures_holder;
-	textures_holder.acquire("background", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"background.jpg"));
+	//setup thor resource manager
+	init_resources();
+	
+	//create the background
 	ImageBackground ib(textures_holder["background"], &window);
 	
 	//setup the user actions

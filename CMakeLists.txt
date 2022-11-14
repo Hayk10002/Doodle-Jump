@@ -10,6 +10,8 @@ add_subdirectory("C:/Users/Hayk/Programming/AllLibraries" ${CMAKE_BINARY_DIR}/Al
 
 add_subdirectory(config)
 
+add_subdirectory(common)
+
 add_subdirectory(drawables)
 
 add_subdirectory(main)
