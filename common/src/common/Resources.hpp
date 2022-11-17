@@ -6,3 +6,4 @@
 extern thor::ResourceHolder <sf::Texture, std::string> textures_holder;
 
 void init_resources();
+void release_resources();

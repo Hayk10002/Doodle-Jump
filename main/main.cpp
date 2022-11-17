@@ -7,9 +7,10 @@
 
 #include <Thor/Input.hpp>
 #include <Thor/Resources.hpp>
+#include <SelbaWard.hpp>
 
-#include <common/Resources.hpp>
 #include <DoodleJumpConfig.hpp>
+#include <common/Resources.hpp>
 #include <drawables/ImageBackground.hpp>
 #include <gameObjects/Player.hpp>
 
@@ -40,7 +41,7 @@ int main()
 	init_resources();
 	
 	//create the background
-	ImageBackground ib(textures_holder["background"], &window);
+	ImageBackground ib(&textures_holder["background"], &window);
 	
 	//setup the user actions
 	thor::ActionMap<UserActions> action_map;
@@ -137,7 +138,8 @@ int main()
 		}
 
 		//updating
-		if (action_map.isActive(UserActions::Close)) window.close();
+		if (action_map.isActive(UserActions::Close)) 
+			window.close();
 		action_map.invokeCallbacks(callback_system, &window);
 
 		ib.update();
@@ -146,6 +148,8 @@ int main()
 
 		ImGui::Begin("Info");
 		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
+		ImGui::Text("Background Position %f, %f", ib.getPosition().x, ib.getPosition().y);
+		ImGui::Text("Zoom x%f", window.getView().getSize().x / window.getSize().x);
 		ImGui::End();
 
 		//drawing
@@ -156,5 +160,6 @@ int main()
 	}
 
 	ImGui::SFML::Shutdown();
+	release_resources();
 	return 0;
 }

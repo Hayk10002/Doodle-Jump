@@ -1,48 +1,65 @@
 #include "ImageBackground.hpp"
 
-ImageBackground::ImageBackground(sf::Texture& texture, sf::FloatRect background_covering_area):
-	m_texture(texture),
-	m_texture_rect(sf::IntRect({ 0, 0 }, (sf::Vector2i)texture.getSize()))
+#include <common/Resources.hpp>
+
+
+ImageBackground::ImageBackground(sf::Texture* texture_ptr, sf::FloatRect background_covering_area)
 {
+	setTexture(texture_ptr);
+	m_texture_rect = sf::IntRect({ 0, 0 }, (sf::Vector2i)m_texture_ptr->getSize());
 	setBackgroundSetGetters(background_covering_area);
 }
 
-ImageBackground::ImageBackground(sf::Texture& texture, sf::FloatRect background_covering_area, sf::IntRect texture_rect):
-	m_texture(texture),
+ImageBackground::ImageBackground(sf::Texture* texture_ptr, sf::FloatRect background_covering_area, sf::IntRect texture_rect):
 	m_texture_rect(texture_rect)
 {
+	setTexture(texture_ptr);
 	setBackgroundSetGetters(background_covering_area);
 }
 
-ImageBackground::ImageBackground(sf::Texture& texture, sf::FloatRect* background_covering_area_ptr) :
-	m_texture(texture),
-	m_texture_rect(sf::IntRect({ 0, 0 }, (sf::Vector2i)texture.getSize()))
+ImageBackground::ImageBackground(sf::Texture* texture_ptr, sf::FloatRect* background_covering_area_ptr)
 {
+	setTexture(texture_ptr);
+	m_texture_rect = sf::IntRect({ 0, 0 }, (sf::Vector2i)m_texture_ptr->getSize());
 	setBackgroundSetGetters(background_covering_area_ptr);
 }
 
-ImageBackground::ImageBackground(sf::Texture& texture, sf::FloatRect* background_covering_area_ptr, sf::IntRect texture_rect) :
-	m_texture(texture),
+ImageBackground::ImageBackground(sf::Texture* texture_ptr, sf::FloatRect* background_covering_area_ptr, sf::IntRect texture_rect) :
 	m_texture_rect(texture_rect)
 {
+	setTexture(texture_ptr);
 	setBackgroundSetGetters(background_covering_area_ptr);
 }
 
-ImageBackground::ImageBackground(sf::Texture& texture, sf::RenderTarget* background_target_ptr) :
-	m_texture(texture),
-	m_texture_rect(sf::IntRect({ 0, 0 }, (sf::Vector2i)texture.getSize()))
+ImageBackground::ImageBackground(sf::Texture* texture_ptr, sf::RenderTarget* background_target_ptr)
 {
+	setTexture(texture_ptr);
+	m_texture_rect = sf::IntRect({ 0, 0 }, (sf::Vector2i)m_texture_ptr->getSize());
 	setBackgroundSetGetters(background_target_ptr);
 }
 
-ImageBackground::ImageBackground(sf::Texture& texture, sf::RenderTarget* background_target_ptr, sf::IntRect texture_rect) :
-	m_texture(texture),
+ImageBackground::ImageBackground(sf::Texture* texture_ptr, sf::RenderTarget* background_target_ptr, sf::IntRect texture_rect) :
 	m_texture_rect(texture_rect)
 {
+	setTexture(texture_ptr);
 	setBackgroundSetGetters(background_target_ptr);
 }
 
 void ImageBackground::update()
+{
+	//moves the object in the way that there are no visual changes but the position is closer to zero
+	if(move_to_0_enabled) moveTo0();
+
+	//other update stuff
+	update_impl();
+}
+
+void ImageBackground::update() const
+{
+	update_impl();
+}
+
+void ImageBackground::moveTo0()
 {
 	//computes the transformation of this object, without counting the position
 	sf::Transform tr_no_move;
@@ -58,7 +75,81 @@ void ImageBackground::update()
 	curr_pos.y = std::fmodf(curr_pos.y, m_texture_rect.height);
 	curr_pos = tr_no_move.transformPoint(curr_pos);
 	setPosition(curr_pos);
+}
 
+void ImageBackground::setTexture(sf::Texture* texture_ptr)
+{
+	if (texture_ptr) m_texture_ptr = texture_ptr;
+	else m_texture_ptr = &textures_holder["empty_white_texture"];
+}
+
+void ImageBackground::setTextureRect(sf::IntRect texture_rect)
+{
+	m_texture_rect = texture_rect;
+}
+
+void ImageBackground::setBackgroundCoveringArea(sf::FloatRect background_covering_area)
+{
+	setBackgroundSetGetters(background_covering_area);
+}
+
+void ImageBackground::setBackgroundCoveringArea(sf::FloatRect* background_covering_area_ptr)
+{
+	setBackgroundSetGetters(background_covering_area_ptr);
+}
+
+void ImageBackground::setBackgroundCoveringArea(sf::RenderTarget* background_target_ptr)
+{
+	setBackgroundSetGetters(background_target_ptr);
+}
+
+void ImageBackground::setColor(sf::Color color)
+{
+	m_color = color;
+}
+
+void ImageBackground::setMovingTo0(bool enabled)
+{
+	move_to_0_enabled = enabled;
+}
+
+sf::Texture* ImageBackground::getTexture()
+{
+	return m_texture_ptr;
+}
+
+const sf::Texture* ImageBackground::getTexture() const
+{
+	return m_texture_ptr;
+}
+
+sf::IntRect ImageBackground::getTextureRect() const
+{
+	return m_texture_rect;
+}
+
+sf::FloatRect ImageBackground::getBackgroundCoveringArea() const
+{
+	return m_get_background_covering_area().first;
+}
+
+float ImageBackground::getBackgroundCoveringAreaRotation() const
+{
+	return m_get_background_covering_area().second;
+}
+
+sf::Color ImageBackground::getColor() const
+{
+	return m_color;
+}
+
+bool ImageBackground::getMovingTo0() const
+{
+	return move_to_0_enabled;
+}
+
+void ImageBackground::update_impl() const
+{
 	//transforms the corner points of the background area to the image "space"
 	sf::Transform inv_tr = getInverseTransform();
 	auto [background_covering_area, background_covering_area_rotation] = m_get_background_covering_area();
@@ -93,67 +184,6 @@ void ImageBackground::update()
 	m_needed_sprites.height = bottom - top;
 	m_needed_sprites.left = left;
 	m_needed_sprites.width = right - left;
-
-}
-
-void ImageBackground::setTexture(sf::Texture& texture)
-{
-	m_texture = texture;
-}
-
-void ImageBackground::setTextureRect(sf::IntRect texture_rect)
-{
-	m_texture_rect = texture_rect;
-}
-
-void ImageBackground::setBackgroundCoveringArea(sf::FloatRect background_covering_area)
-{
-	setBackgroundSetGetters(background_covering_area);
-}
-
-void ImageBackground::setBackgroundCoveringArea(sf::FloatRect* background_covering_area_ptr)
-{
-	setBackgroundSetGetters(background_covering_area_ptr);
-}
-
-void ImageBackground::setBackgroundCoveringArea(sf::RenderTarget* background_target_ptr)
-{
-	setBackgroundSetGetters(background_target_ptr);
-}
-
-void ImageBackground::setColor(sf::Color color)
-{
-	m_color = color;
-}
-
-sf::Texture& ImageBackground::getTexture()
-{
-	return m_texture;
-}
-
-const sf::Texture& ImageBackground::getTexture() const
-{
-	return m_texture;
-}
-
-sf::IntRect ImageBackground::getTextureRect() const
-{
-	return m_texture_rect;
-}
-
-sf::FloatRect ImageBackground::getBackgroundCoveringArea() const
-{
-	return m_get_background_covering_area().first;
-}
-
-float ImageBackground::getBackgroundCoveringAreaRotation() const
-{
-	return m_get_background_covering_area().second;
-}
-
-sf::Color ImageBackground::getColor() const
-{
-	return m_color;
 }
 
 void ImageBackground::setBackgroundSetGetters(sf::FloatRect background_covering_area)
@@ -195,11 +225,24 @@ void ImageBackground::setBackgroundSetGetters(sf::RenderTarget* background_targe
 void ImageBackground::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	states.transform *= getTransform();
-	sf::Sprite sp(m_texture, m_texture_rect);
+	sf::IntRect texture_rect = (m_texture_ptr->isRepeated() ?
+								sf::IntRect(0, 0, 
+											m_needed_sprites.width * m_texture_rect.width,
+											m_needed_sprites.height * m_texture_rect.height) :
+								m_texture_rect);
+	sf::Sprite sp(*m_texture_ptr, texture_rect);
 	sp.setColor(m_color);
-	for(int i = m_needed_sprites.top; i < m_needed_sprites.top + m_needed_sprites.height; i++) for (int j = m_needed_sprites.left; j < m_needed_sprites.left + m_needed_sprites.width; j++)
+	if(m_texture_ptr->isRepeated()) 
 	{
-		sp.setPosition(j * m_texture_rect.width, i * m_texture_rect.height);
+		sp.setPosition(m_needed_sprites.left * m_texture_rect.width, m_needed_sprites.top * m_texture_rect.height);
 		target.draw(sp, states);
+	}
+	else
+	{
+		for (int i = m_needed_sprites.top; i < m_needed_sprites.top + m_needed_sprites.height; i++) for (int j = m_needed_sprites.left; j < m_needed_sprites.left + m_needed_sprites.width; j++)
+		{
+			sp.setPosition(j * m_texture_rect.width, i * m_texture_rect.height);
+			target.draw(sp, states);
+		}
 	}
 }

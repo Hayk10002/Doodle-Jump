@@ -10,6 +10,7 @@ add_library(${DrawablesTargetName} STATIC
 target_link_libraries(${DrawablesTargetName}
         PUBLIC
             AllLibraries
+            common
 )  
 
 target_include_directories(${DrawablesTargetName}
