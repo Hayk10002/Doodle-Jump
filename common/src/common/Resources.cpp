@@ -2,18 +2,18 @@
 
 #include <DoodleJumpConfig.hpp>
 
-thor::ResourceHolder <sf::Texture, std::string> textures_holder;
+thor::ResourceHolder <sf::Texture, std::string> global_textures;
 
 void init_resources()
 {
-	textures_holder.acquire("background", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"background.jpg"));
-	textures_holder["background"].setRepeated(true);
-	textures_holder.acquire("empty_white_texture", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"empty_white_square.png"));
-	textures_holder["empty_white_texture"].setRepeated(true);
+	global_textures.acquire("background", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"background.jpg"));
+	global_textures["background"].setRepeated(true);
+	global_textures.acquire("empty_white_texture", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"empty_white_square.png"));
+	global_textures["empty_white_texture"].setRepeated(true);
 }
 
 void release_resources()
 {
-	textures_holder.release("background");
-	textures_holder.release("empty_white_texture");
+	global_textures.release("background");
+	global_textures.release("empty_white_texture");
 }

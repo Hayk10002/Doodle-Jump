@@ -80,7 +80,7 @@ void ImageBackground::moveTo0()
 void ImageBackground::setTexture(sf::Texture* texture_ptr)
 {
 	if (texture_ptr) m_texture_ptr = texture_ptr;
-	else m_texture_ptr = &textures_holder["empty_white_texture"];
+	else m_texture_ptr = &global_textures["empty_white_texture"];
 }
 
 void ImageBackground::setTextureRect(sf::IntRect texture_rect)

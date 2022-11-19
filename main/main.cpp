@@ -12,7 +12,6 @@
 #include <DoodleJumpConfig.hpp>
 #include <common/Resources.hpp>
 #include <drawables/ImageBackground.hpp>
-#include <gameObjects/Player.hpp>
 
 
 enum class UserActions
@@ -41,7 +40,7 @@ int main()
 	init_resources();
 	
 	//create the background
-	ImageBackground ib(&textures_holder["background"], &window);
+	ImageBackground ib(&global_textures["background"], &window);
 	
 	//setup the user actions
 	thor::ActionMap<UserActions> action_map;
