@@ -7,6 +7,7 @@ target_link_libraries(${MainTargetName}
             config
             AllLibraries
             drawables
+            level
             common
 )
 

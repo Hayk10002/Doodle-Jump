@@ -14,4 +14,6 @@ add_subdirectory(common)
 
 add_subdirectory(drawables)
 
+add_subdirectory(level)
+
 add_subdirectory(main)

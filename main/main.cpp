@@ -11,7 +11,9 @@
 
 #include <DoodleJumpConfig.hpp>
 #include <common/Resources.hpp>
+#include <common/DebugImGui.hpp>
 #include <drawables/ImageBackground.hpp>
+#include <level/level.hpp>
 
 
 enum class UserActions
@@ -21,7 +23,8 @@ enum class UserActions
 	Resize,
 	Zoom,
 	Move,
-	Rotate
+	Rotate,
+	ChangeScrollingType
 };
 
 
@@ -30,7 +33,7 @@ int main()
 {
 	//setup the window
 	sf::RenderWindow window(sf::VideoMode(600, 800), "Doodle Jump");
-	window.setFramerateLimit(60);
+	sf::Vector2u window_prev_size(window.getSize());
 
 	//setup Dear ImGui
 	ImGui::SFML::Init(window);
@@ -41,7 +44,13 @@ int main()
 	
 	//create the background
 	ImageBackground ib(&global_textures["background"], &window);
-	
+
+	//create level
+	Level level;
+	level.setBackground(ib);
+	level.setWindow(&window);
+	level.setScrollingType(ExponentialScrolling(sf::seconds(2), 10));
+
 	//setup the user actions
 	thor::ActionMap<UserActions> action_map;
 	action_map[UserActions::Close] = thor::Action(sf::Event::Closed);
@@ -55,48 +64,48 @@ int main()
 	action_map[UserActions::Rotate] =
 		thor::Action(sf::Keyboard::Q) ||
 		thor::Action(sf::Keyboard::E);
+	action_map[UserActions::ChangeScrollingType] =
+		thor::Action(sf::Keyboard::I) ||
+		thor::Action(sf::Keyboard::L) ||
+		thor::Action(sf::Keyboard::X);
+
+	//frame clock
+	sf::Clock deltaClock;
+	sf::Time full_time, dt;
 
 	//callback functions for user actions
 
-	std::function<void(thor::ActionContext<UserActions>)> onResize = [&window](thor::ActionContext<UserActions> context)
+	std::function<void(thor::ActionContext<UserActions>)> onResize = [&level, &window_prev_size](thor::ActionContext<UserActions> context)
 	{
-		sf::View v(sf::FloatRect(0, 0, context.event->size.width, context.event->size.height));
-		window.setView(v);
+		sf::Vector2f scale = { (float)window_prev_size.x / context.event->size.width, (float)window_prev_size.y / context.event->size.height };
+		window_prev_size = { context.event->size.width, context.event->size.height };
+		level.zoom(scale, true);
 	};
 
-	std::function<void(thor::ActionContext<UserActions>)> onZoom = [&window](thor::ActionContext<UserActions> context)
+	std::function<void(thor::ActionContext<UserActions>)> onZoom = [&level](thor::ActionContext<UserActions> context)
 	{
-		sf::View v = window.getView();
-		v.zoom(std::pow(1.3f, context.event->mouseWheelScroll.delta));
-		window.setView(v);
+		level.zoom(std::pow(1.3f, context.event->mouseWheelScroll.delta));
 	};
 
-	std::function<void()> onMove = [&ib]()
+	std::function<void()> onMove = [&level, &dt]()
 	{
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) ib.move(20, 0);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) ib.move(-20, 0);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) ib.move(0, 20);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) ib.move(0, -20);
-		/*
-		sf::View v = window.getView();
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) v.move(-20, 0);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) v.move(20, 0);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) v.move(0, -20);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) v.move(0, 20);
-		window.setView(v);
-		*/
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) level.scrollLeft(dt.asSeconds() * 1000);
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) level.scrollRight(dt.asSeconds() * 1000);
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) level.scrollUp(dt.asSeconds() * 1000);
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) level.scrollDown(dt.asSeconds() * 1000);
 	};
 
-	std::function<void()> onRotate = [&window]()
+	std::function<void()> onRotate = [&level, &dt]()
 	{
-		/*if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) ib.rotate(1);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::E)) ib.rotate(-1);*/
-		
-		sf::View v = window.getView();
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) v.rotate(-1);
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::E)) v.rotate(1);
-		window.setView(v);
-		
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) level.rotate(dt.asSeconds() * -50);
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::E)) level.rotate(dt.asSeconds() * 50);
+	};
+
+	std::function<void()> onChangeScrollingType = [&level]()
+	{
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::I)) level.setScrollingType(InstantScrolling());
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::L)) level.setScrollingType(LinearScrolling(sf::seconds(2)));
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::X)) level.setScrollingType(ExponentialScrolling(sf::seconds(2), 10));
 	};
 
 	//bind callbacks to actions
@@ -105,9 +114,7 @@ int main()
 	callback_system.connect(UserActions::Zoom, onZoom);
 	callback_system.connect0(UserActions::Move, onMove);
 	callback_system.connect0(UserActions::Rotate, onRotate);
-
-	//frame clock
-	sf::Clock deltaClock;
+	callback_system.connect0(UserActions::ChangeScrollingType, onChangeScrollingType);
 
 	while (window.isOpen())
 	{
@@ -141,19 +148,23 @@ int main()
 			window.close();
 		action_map.invokeCallbacks(callback_system, &window);
 
-		ib.update();
+		level.update();
 
-		ImGui::SFML::Update(window, deltaClock.restart());
+		full_time += (dt = deltaClock.restart());
+		ImGui::SFML::Update(window, dt);
 
 		ImGui::Begin("Info");
 		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
-		ImGui::Text("Background Position %f, %f", ib.getPosition().x, ib.getPosition().y);
-		ImGui::Text("Zoom x%f", window.getView().getSize().x / window.getSize().x);
+		ImGui::Text("Background Position: %f, %f", ib.getPosition().x, ib.getPosition().y);
+		ImGui::Text("Level current view pos: %f, %f", level.m_view.getCenter().x, level.m_view.getCenter().y);
+		ImGui::Text("Level view destination pos: %f, %f", level.m_view_destination.getCenter().x, level.m_view_destination.getCenter().y);
+		ImGui::Text("Level in scroll?: %i", level.m_in_scroll);
+		ImGui::Text("Zoom: x%f", window.getView().getSize().x / window.getSize().x);
 		ImGui::End();
 
 		//drawing
 		window.clear();
-		window.draw(ib);
+		window.draw(level);
 		ImGui::SFML::Render(window);
 		window.display();
 	}

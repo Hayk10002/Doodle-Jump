@@ -5,6 +5,8 @@ project(${CommonTargetName})
 add_library(${CommonTargetName} STATIC
             src/common/Resources.hpp
             src/common/Resources.cpp
+            src/common/DebugImGui.hpp
+            src/common/DebugImGui.cpp
 )
 
 target_link_libraries(${CommonTargetName}
