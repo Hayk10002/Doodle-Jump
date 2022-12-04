@@ -1,6 +1,7 @@
 #include "Level.hpp"
 #include <type_traits>
 #include <numbers>
+#include <cmath>
 
 #include <imgui.h>
 
@@ -18,28 +19,34 @@ sf::Time ViewScrolling::getDuration() const
 
 sf::View ViewScrolling::lerp(const sf::View& start, const sf::View& end, float alpha)
 {
-	auto linearInterolation = [](const auto& start, const auto& end, float alpha)
+	
+	auto lerp = []<class T> requires (std::is_same_v<T, sf::Vector2f> || std::is_same_v<T, sf::FloatRect>) (const T & start, const T & end, float alpha)
 	{
-		alpha = std::clamp(alpha, 0.f, 1.f);
-		return (1 - alpha) * start + alpha * end;
+		if constexpr (std::is_same_v<T, sf::Vector2f>)
+		{
+			sf::Vector2f res;
+			res.x = std::lerp(start.x, end.x, alpha);
+			res.y = std::lerp(start.y, end.y, alpha);
+			return res;
+		}
+		else
+		{
+			sf::FloatRect res;
+			res.left = std::lerp(start.left, end.left, alpha);
+			res.top = std::lerp(start.top, end.top, alpha);
+			res.width = std::lerp(start.width, end.width, alpha);
+			res.height = std::lerp(start.height, end.height, alpha);
+			return res;
+		}
 	};
 
-	auto linearInterolationFloatRect = [&linearInterolation](const sf::FloatRect& start, const sf::FloatRect& end, float alpha)
-	{
-		sf::FloatRect res;
-		res.left = linearInterolation(start.left, end.left, alpha);
-		res.top = linearInterolation(start.top, end.top, alpha);
-		res.width = linearInterolation(start.width, end.width, alpha);
-		res.height = linearInterolation(start.height, end.height, alpha);
-		return res;
-	};
 
 	sf::View view;
 
-	view.setCenter(linearInterolation(start.getCenter(), end.getCenter(), alpha));
-	view.setRotation(linearInterolation(start.getRotation(), end.getRotation() + std::round((start.getRotation() - end.getRotation()) / 360) * 360, alpha));
-	view.setSize(linearInterolation(start.getSize(), end.getSize(), alpha));
-	view.setViewport(linearInterolationFloatRect(start.getViewport(), end.getViewport(), alpha));
+	view.setCenter(lerp(start.getCenter(), end.getCenter(), alpha));
+	view.setRotation(std::lerp(start.getRotation(), end.getRotation() + std::round((start.getRotation() - end.getRotation()) / 360) * 360, alpha));
+	view.setSize(lerp(start.getSize(), end.getSize(), alpha));
+	view.setViewport(lerp(start.getViewport(), end.getViewport(), alpha));
 
 	return view;
 }
