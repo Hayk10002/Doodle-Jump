@@ -55,16 +55,53 @@ ViewScrolling::ViewScrolling(sf::Time duration):
 	m_duration(duration)
 {}
 
+LevelObject::LevelObject(std::shared_ptr<const size_t*> level) :
+	level(level),
+	identifier(identifier_counter++)
+{}
+
+LevelObject::LevelObject(const LevelObject& other):
+	level(other.level),
+	drawable_ptr(other.drawable_ptr),
+	update(other.update),
+	identifier(other.identifier)
+{}
+
+LevelObject LevelObject::get_duplicate()
+{
+	LevelObject obj(*this);
+	obj.identifier = LevelObject::identifier_counter++;
+	return obj;
+}
+
+bool LevelObject::operator==(LevelObject other) const
+{
+	return std::tie(level, drawable_ptr, identifier) == std::tie(other.level, other.drawable_ptr, other.identifier);
+}
+
+LevelObject& LevelObject::operator=(const LevelObject& other)
+{
+	level = other.level;
+	drawable_ptr = other.drawable_ptr;
+	identifier = other.identifier;
+	update = other.update;
+	return *this;
+}
+
 Level::Level()	
 {
 	setScrollingType(InstantScrolling());
+}
+
+Level::~Level()
+{
+	for (auto& obj : m_objects) (*obj.level) = nullptr;
 }
 
 void Level::setWindow(sf::RenderWindow * window)
 {
 	m_window_ptr = window;
 	m_view = m_view_destination = window->getDefaultView();
-	m_background.setBackgroundCoveringArea(window);
 }
 
 sf::RenderWindow* Level::getWindow() const
@@ -72,15 +109,108 @@ sf::RenderWindow* Level::getWindow() const
 	return m_window_ptr;
 }
 
-void Level::setBackground(const ImageBackground& background)
+bool Level::removeObject(LevelObject obj)
 {
-	m_background = background;
-	m_background.setBackgroundCoveringArea(m_window_ptr);
+	if (!isMyObject(obj)) return false;
+	(*obj.level) = nullptr;
+	if(!removeFromUpdateList(obj)) return false;
+	if(!removeFromDrawList(obj)) return false;;
+	m_objects.erase(obj);
+	return true;
 }
 
-const ImageBackground& Level::getBackground() const
+bool Level::moveObjectUpInUpdateOrder(LevelObject obj, int count)
 {
-	return m_background;
+	if (!isMyObject(obj)) return false;
+	size_t pos = std::find(m_update_order.begin(), m_update_order.end(), obj) - m_update_order.begin();
+	if (pos == m_update_order.size()) return false;
+
+	m_update_order.erase(m_update_order.begin() + pos);
+	pos += count;
+	pos = std::clamp<size_t>(pos, 0, m_update_order.size());
+	m_update_order.insert(m_update_order.begin() + pos, obj);
+	return true;
+}
+
+bool Level::moveObjectDownInUpdateOrder(LevelObject obj, int count)
+{
+	return moveObjectUpInUpdateOrder(obj, -count);
+}
+
+bool Level::updateFirst(LevelObject obj)
+{
+	return moveObjectDownInUpdateOrder(obj, m_update_order.size());
+}
+
+bool Level::updateLast(LevelObject obj)
+{
+	return moveObjectUpInUpdateOrder(obj, m_update_order.size());
+}
+
+bool Level::addToUpdateList(LevelObject obj, int position)
+{
+	if (!isMyObject(obj)) return false;
+	if(std::find(m_update_order.begin(), m_update_order.end(), obj) != m_update_order.end()) return false;
+	if (position < 0) position += m_update_order.size() + 1;
+	position = std::clamp<int>(position, 0, m_update_order.size());
+	m_update_order.insert(m_update_order.begin() + position, obj); 
+	return true;
+}
+
+bool Level::removeFromUpdateList(LevelObject obj)
+{
+	if (!isMyObject(obj)) return false;
+	auto itr = std::find(m_update_order.begin(), m_update_order.end(), obj);
+	if (itr == m_update_order.end()) return false;
+	m_update_order.erase(itr);
+	return true;
+}
+
+bool Level::moveObjectUpInDrawOrder(LevelObject obj, int count)
+{
+	if (!isMyObject(obj)) return false;
+	size_t pos = std::find(m_draw_order.begin(), m_draw_order.end(), obj) - m_draw_order.begin();
+	if (pos == m_draw_order.size()) return false;
+
+	m_draw_order.erase(m_draw_order.begin() + pos);
+	pos += count;
+	pos = std::clamp<size_t>(pos, 0, m_draw_order.size());
+	m_draw_order.insert(m_draw_order.begin() + pos, obj);
+	return true;
+}
+
+bool Level::moveObjectDownInDrawOrder(LevelObject obj, int count)
+{
+	return moveObjectUpInDrawOrder(obj, -count);
+}
+
+bool Level::drawFirst(LevelObject obj)
+{
+	return moveObjectDownInDrawOrder(obj, m_draw_order.size());
+}
+
+bool Level::drawLast(LevelObject obj)
+{
+	return moveObjectUpInDrawOrder(obj, m_draw_order.size());
+}
+
+bool Level::addToDrawList(LevelObject obj, int position)
+{
+	if (!isMyObject(obj)) return false;
+	if (std::find(m_draw_order.begin(), m_draw_order.end(), obj) != m_draw_order.end()) return false;
+	if (position < 0) position += m_draw_order.size() + 1;
+	position = std::clamp<int>(position, 0, m_draw_order.size());
+	m_draw_order.insert(m_draw_order.begin() + position, obj);
+	return true;
+}
+
+bool Level::removeFromDrawList(LevelObject obj)
+{
+	if (!isMyObject(obj)) return false;
+	auto itr = std::find(m_draw_order.begin(), m_draw_order.end(), obj);
+	if (itr == m_draw_order.end()) return false;
+	m_draw_order.erase(itr);
+	return true;
 }
 
 void Level::scrollUp(float offset, bool instant)
@@ -164,10 +294,10 @@ std::string Level::getScrollingTypeName() const
 	return m_scrolling_type_ptr->getName();
 }
 
-void Level::update()
+void Level::update(sf::Time dt)
 {
 	updateScrolling();
-	m_background.update();
+	for (auto& obj : m_update_order) obj.update(dt);
 }
 
 void Level::updateScrolling()
@@ -188,9 +318,14 @@ sf::View Level::getCurrentView() const
 
 }
 
+bool Level::isMyObject(LevelObject obj)
+{
+	return **obj.level == m_identifier;
+}
+
 void Level::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
-	target.draw(m_background, states);
+	for (auto& obj : m_draw_order) target.draw(*obj.drawable_ptr, states);
 }
 
 InstantScrolling::InstantScrolling() :

@@ -31,6 +31,7 @@ enum class UserActions
 
 int main()
 {
+	
 	//setup the window
 	sf::RenderWindow window(sf::VideoMode(600, 800), "Doodle Jump");
 	sf::Vector2u window_prev_size(window.getSize());
@@ -47,7 +48,7 @@ int main()
 
 	//create level
 	Level level;
-	level.setBackground(ib);
+	level.addObject(ib);
 	level.setWindow(&window);
 	level.setScrollingType(ExponentialScrolling(sf::seconds(2), 10));
 
@@ -148,17 +149,14 @@ int main()
 			window.close();
 		action_map.invokeCallbacks(callback_system, &window);
 
-		level.update();
-
 		full_time += (dt = deltaClock.restart());
+
+		level.update(dt);
 		ImGui::SFML::Update(window, dt);
 
 		ImGui::Begin("Info");
 		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
 		ImGui::Text("Background Position: %f, %f", ib.getPosition().x, ib.getPosition().y);
-		ImGui::Text("Level current view pos: %f, %f", level.m_view.getCenter().x, level.m_view.getCenter().y);
-		ImGui::Text("Level view destination pos: %f, %f", level.m_view_destination.getCenter().x, level.m_view_destination.getCenter().y);
-		ImGui::Text("Level in scroll?: %i", level.m_in_scroll);
 		ImGui::Text("Zoom: x%f", window.getView().getSize().x / window.getSize().x);
 		ImGui::End();
 
