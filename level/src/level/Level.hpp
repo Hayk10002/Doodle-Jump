@@ -7,47 +7,52 @@
 #include <Thor/Resources.hpp>
 
 
+class SimpleView
+{
+	using Vector2f = sf::Vector2f;
+	using FloatRect = sf::FloatRect;
+
+	Vector2f m_center{};
+	Vector2f m_size{};
+	float m_rotation{0};
+	FloatRect m_viewport{ {0, 0}, {1, 1} };
+
+public:
+	SimpleView();
+	SimpleView(const sf::View& view);
+	explicit SimpleView(const FloatRect& rectangle);
+	SimpleView(const Vector2f& center, const Vector2f& size);
+	void setCenter(float x, float y);
+	void setCenter(const Vector2f& center);
+	void setSize(float width, float height);
+	void setSize(const Vector2f& size);
+	void setRotation(float angle);
+	void setViewport(const FloatRect& viewport);
+	void reset(const FloatRect& rectangle);
+	const Vector2f& getCenter() const;
+	const Vector2f& getSize() const;
+	float getRotation() const;
+	const FloatRect& getViewport() const;
+	void move(float offsetX, float offsetY);
+	void move(const Vector2f& offset);
+	void rotate(float angle);
+	void zoom(float factor);
+	sf::View asSFMLView() const;
+};
+
 //abstract class for all scrolling algorithms
 class ViewScrolling
 {
 protected:
 
-	static sf::View lerp(const sf::View& start, const sf::View& end, float alpha);
+	static SimpleView lerp(const SimpleView& start, const SimpleView& end, float alpha);
 	sf::Time m_duration;
 	std::string m_name = "None";
 	ViewScrolling(sf::Time duration);
 public:
-	virtual sf::View getView(sf::Time passed_time, const sf::View& start_view, const sf::View& end_view) const = 0;
+	virtual SimpleView getView(sf::Time passed_time, const SimpleView& start_view, const SimpleView& end_view) const = 0;
 	std::string getName() const;
 	sf::Time getDuration() const;
-};
-
-class LevelObject
-{
-
-	LevelObject(std::shared_ptr<const size_t*> level);
-
-	std::shared_ptr<const size_t*> level;
-	sf::Drawable* drawable_ptr{};
-	std::function<void(sf::Time)> update{};
-	size_t identifier{};
-	inline static size_t identifier_counter{};
-public:
-
-	LevelObject(const LevelObject& other);
-	LevelObject get_duplicate();
-	bool operator==(LevelObject other) const;
-	LevelObject& operator=(const LevelObject& other);
-	friend class Level;
-};
-
-template<>
-struct std::hash<LevelObject>
-{
-	size_t operator()(const LevelObject& obj) const
-	{
-		return _Hash_array_representation<char>((char*)&obj, sizeof(LevelObject));
-	}
 };
 
 //class for creating scrolling environment for creating (for example) levels
@@ -64,12 +69,35 @@ public:
 	void setWindow(sf::RenderWindow* window);
 	sf::RenderWindow* getWindow() const;
 
-	
+	class Object
+	{
+
+		Object(std::shared_ptr<const size_t*> level);
+
+		std::shared_ptr<const size_t*> level;
+		sf::Drawable* drawable_ptr{};
+		std::function<void(sf::Time)> update{};
+		size_t identifier{};
+		inline static size_t identifier_counter{};
+
+		struct Hasher
+		{
+			size_t operator()(const Object& obj) const;
+		};
+
+	public:
+
+		Object(const Object& other);
+		Object get_duplicate();
+		bool operator==(Object other) const;
+		friend class Level;
+	};
+
 
 	template<std::derived_from<sf::Drawable> T>
-	LevelObject addObject(T& obj)
+	Object addObject(T& obj)
 	{
-		LevelObject object(std::make_shared<const size_t*>(&m_identifier));
+		Object object(std::make_shared<const size_t*>(&m_identifier));
 		object.drawable_ptr = &obj;
 		if constexpr (requires { obj.update(sf::Time::Zero); })
 			object.update = [&obj](sf::Time t) {obj.update(t); };
@@ -83,20 +111,22 @@ public:
 
 		return object;
 	}
-	bool removeObject(LevelObject obj);
+	bool removeObject(Object obj);
 
-	bool moveObjectUpInUpdateOrder(LevelObject obj, int count = 1);
-	bool moveObjectDownInUpdateOrder(LevelObject obj, int count = 1);
-	bool updateFirst(LevelObject obj);
-	bool updateLast(LevelObject obj);
-	bool addToUpdateList(LevelObject obj, int position = -1);
-	bool removeFromUpdateList(LevelObject obj);
-	bool moveObjectUpInDrawOrder(LevelObject obj, int count = 1);
-	bool moveObjectDownInDrawOrder(LevelObject obj, int count = 1);
-	bool drawFirst(LevelObject obj);
-	bool drawLast(LevelObject obj);
-	bool addToDrawList(LevelObject obj, int position = -1);
-	bool removeFromDrawList(LevelObject obj);
+	bool moveObjectUpInUpdateOrder(Object obj, int count = 1);
+	bool moveObjectDownInUpdateOrder(Object obj, int count = 1);
+	bool updateFirst(Object obj);
+	bool updateLast(Object obj);
+	bool addToUpdateList(Object obj, int position = -1);
+	bool isInUpdateList(Object obj);
+	bool removeFromUpdateList(Object obj);
+	bool moveObjectUpInDrawOrder(Object obj, int count = 1);
+	bool moveObjectDownInDrawOrder(Object obj, int count = 1);
+	bool drawFirst(Object obj);
+	bool drawLast(Object obj);
+	bool addToDrawList(Object obj, int position = -1);
+	bool isInDrawList(Object obj);
+	bool removeFromDrawList(Object obj);
 
 	void scrollUp(float offset, bool instant = false);
 	void scrollDown(float offset, bool instant = false);
@@ -121,22 +151,24 @@ public:
 	void update(sf::Time dt);
 	void updateScrolling();
 
-	sf::View getCurrentView() const;
+	SimpleView getCurrentView() const;
 
 private:
 
+	std::deque<Object>::iterator getObjectsItrForUpdateList(Object obj);
+	std::deque<Object>::iterator getObjectsItrForDrawList(Object obj);
 
-	sf::View m_view{}, m_view_destination{};
+	SimpleView m_view{}, m_view_destination{};
 	std::unique_ptr<ViewScrolling> m_scrolling_type_ptr{nullptr};
-	std::unordered_set<LevelObject> m_objects{};
-	std::deque<LevelObject> m_update_order, m_draw_order;
+	std::unordered_set<Object, Object::Hasher> m_objects{};
+	std::deque<Object> m_update_order, m_draw_order;
 	sf::Clock m_scroll_timer;
 	bool m_in_scroll{false};
 	sf::RenderWindow* m_window_ptr{nullptr};
 
 	inline static size_t identifier_counter{ 0 };
 	const size_t m_identifier{ identifier_counter++ };
-	bool isMyObject(LevelObject obj);
+	bool isMyObject(Object obj);
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 };
@@ -144,19 +176,19 @@ private:
 struct InstantScrolling : ViewScrolling
 {
 	InstantScrolling();
-	sf::View getView(sf::Time passed_time, const sf::View& start_view, const sf::View& end_view) const override;
+	SimpleView getView(sf::Time passed_time, const SimpleView& start_view, const SimpleView& end_view) const override;
 };
 
 struct LinearScrolling : ViewScrolling
 {
 	LinearScrolling(sf::Time duration);
-	sf::View getView(sf::Time passed_time, const sf::View& start_view, const sf::View& end_view) const override;
+	SimpleView getView(sf::Time passed_time, const SimpleView& start_view, const SimpleView& end_view) const override;
 };
 
 struct ExponentialScrolling : ViewScrolling
 {
 	ExponentialScrolling(sf::Time duration, float power);
-	sf::View getView(sf::Time passed_time, const sf::View& start_view, const sf::View& end_view) const override;
+	SimpleView getView(sf::Time passed_time, const SimpleView& start_view, const SimpleView& end_view) const override;
 private:
 	float m_polynolial_power{ 3 }, m_exponent_base, m_turning_point, m_polynomial_scale;
 };

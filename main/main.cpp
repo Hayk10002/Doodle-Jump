@@ -24,7 +24,9 @@ enum class UserActions
 	Zoom,
 	Move,
 	Rotate,
-	ChangeScrollingType
+	ChangeScrollingType,
+	ToggleUpdate,
+	ToggleDraw
 };
 
 
@@ -48,7 +50,7 @@ int main()
 
 	//create level
 	Level level;
-	level.addObject(ib);
+	Level::Object ib_obj = level.addObject(ib);
 	level.setWindow(&window);
 	level.setScrollingType(ExponentialScrolling(sf::seconds(2), 10));
 
@@ -66,9 +68,13 @@ int main()
 		thor::Action(sf::Keyboard::Q) ||
 		thor::Action(sf::Keyboard::E);
 	action_map[UserActions::ChangeScrollingType] =
-		thor::Action(sf::Keyboard::I) ||
-		thor::Action(sf::Keyboard::L) ||
-		thor::Action(sf::Keyboard::X);
+		thor::Action(sf::Keyboard::I, thor::Action::PressOnce) ||
+		thor::Action(sf::Keyboard::L, thor::Action::PressOnce) ||
+		thor::Action(sf::Keyboard::X, thor::Action::PressOnce);
+	action_map[UserActions::ToggleUpdate] =
+		thor::Action(sf::Keyboard::U, thor::Action::PressOnce);
+	action_map[UserActions::ToggleDraw] =
+		thor::Action(sf::Keyboard::F, thor::Action::PressOnce);
 
 	//frame clock
 	sf::Clock deltaClock;
@@ -147,6 +153,16 @@ int main()
 		//updating
 		if (action_map.isActive(UserActions::Close)) 
 			window.close();
+		if (action_map.isActive(UserActions::ToggleUpdate))
+		{
+			if (level.isInUpdateList(ib_obj)) level.removeFromUpdateList(ib_obj);
+			else level.addToUpdateList(ib_obj);
+		}
+		if (action_map.isActive(UserActions::ToggleDraw))
+		{
+			if (level.isInDrawList(ib_obj)) level.removeFromDrawList(ib_obj);
+			else level.addToDrawList(ib_obj);
+		}
 		action_map.invokeCallbacks(callback_system, &window);
 
 		full_time += (dt = deltaClock.restart());
@@ -158,6 +174,8 @@ int main()
 		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
 		ImGui::Text("Background Position: %f, %f", ib.getPosition().x, ib.getPosition().y);
 		ImGui::Text("Zoom: x%f", window.getView().getSize().x / window.getSize().x);
+		ImGui::Text("Background update: %i", level.isInUpdateList(ib_obj));
+		ImGui::Text("Background draw: %i", level.isInDrawList(ib_obj));
 		ImGui::End();
 
 		//drawing

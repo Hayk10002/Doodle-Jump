@@ -7,6 +7,117 @@
 
 #include <common/DebugImGui.hpp>
 
+SimpleView::SimpleView()
+{
+	reset({ {0, 0}, {1000, 1000} });
+}
+
+SimpleView::SimpleView(const sf::View& view):
+	m_center(view.getCenter()),
+	m_size(view.getSize()),
+	m_rotation(view.getRotation()),
+	m_viewport(view.getViewport())
+{}
+
+SimpleView::SimpleView(const FloatRect& rectangle)
+{
+	reset(rectangle);
+}
+
+SimpleView::SimpleView(const Vector2f& center, const Vector2f& size):
+	m_center(center),
+	m_size(size)
+{}
+
+void SimpleView::setCenter(float x, float y)
+{
+	setCenter({ x, y });
+}
+
+void SimpleView::setCenter(const Vector2f& center)
+{
+	m_center = center;
+}
+
+void SimpleView::setSize(float width, float height)
+{
+	setSize({ width, height });
+}
+
+void SimpleView::setSize(const Vector2f& size)
+{
+	m_size = size;
+}
+
+void SimpleView::setRotation(float angle)
+{
+	m_rotation = std::fmodf(angle, 360);
+}
+
+void SimpleView::setViewport(const FloatRect& viewport)
+{
+	m_viewport = viewport;
+}
+
+void SimpleView::reset(const FloatRect& rectangle)
+{
+	m_center.x = rectangle.left + rectangle.width / 2.f;
+	m_center.y = rectangle.top + rectangle.height / 2.f;
+	m_size.x = rectangle.width;
+	m_size.y = rectangle.height;
+	m_rotation = 0;
+}
+
+const sf::Vector2f& SimpleView::getCenter() const
+{
+	return m_center;
+}
+
+const sf::Vector2f& SimpleView::getSize() const
+{
+	return m_size;
+}
+
+float SimpleView::getRotation() const
+{
+	return m_rotation;
+}
+
+const sf::FloatRect& SimpleView::getViewport() const
+{
+	return m_viewport;
+}
+
+void SimpleView::move(float offsetX, float offsetY)
+{
+	move({ offsetX, offsetY });
+}
+
+void SimpleView::move(const Vector2f& offset)
+{
+	setCenter(m_center + offset);
+}
+
+void SimpleView::rotate(float angle)
+{
+	setRotation(m_rotation + angle);
+}
+
+void SimpleView::zoom(float factor)
+{
+	setSize(m_size * factor);
+}
+
+sf::View SimpleView::asSFMLView() const
+{
+	sf::View res;
+	res.setCenter(m_center);
+	res.setRotation(m_rotation);
+	res.setSize(m_size);
+	res.setViewport(m_viewport);
+	return res;
+}
+
 std::string ViewScrolling::getName() const
 {
     return m_name;
@@ -17,7 +128,7 @@ sf::Time ViewScrolling::getDuration() const
 	return m_duration;
 }
 
-sf::View ViewScrolling::lerp(const sf::View& start, const sf::View& end, float alpha)
+SimpleView ViewScrolling::lerp(const SimpleView& start, const SimpleView& end, float alpha)
 {
 	
 	auto lerp = []<class T> requires (std::is_same_v<T, sf::Vector2f> || std::is_same_v<T, sf::FloatRect>) (const T & start, const T & end, float alpha)
@@ -41,7 +152,7 @@ sf::View ViewScrolling::lerp(const sf::View& start, const sf::View& end, float a
 	};
 
 
-	sf::View view;
+	SimpleView view;
 
 	view.setCenter(lerp(start.getCenter(), end.getCenter(), alpha));
 	view.setRotation(std::lerp(start.getRotation(), end.getRotation() + std::round((start.getRotation() - end.getRotation()) / 360) * 360, alpha));
@@ -55,37 +166,28 @@ ViewScrolling::ViewScrolling(sf::Time duration):
 	m_duration(duration)
 {}
 
-LevelObject::LevelObject(std::shared_ptr<const size_t*> level) :
+Level::Object::Object(std::shared_ptr<const size_t*> level) :
 	level(level),
 	identifier(identifier_counter++)
 {}
 
-LevelObject::LevelObject(const LevelObject& other):
+Level::Object::Object(const Object& other):
 	level(other.level),
 	drawable_ptr(other.drawable_ptr),
 	update(other.update),
 	identifier(other.identifier)
 {}
 
-LevelObject LevelObject::get_duplicate()
+Level::Object Level::Object::get_duplicate()
 {
-	LevelObject obj(*this);
-	obj.identifier = LevelObject::identifier_counter++;
+	Object obj(*this);
+	obj.identifier = Object::identifier_counter++;
 	return obj;
 }
 
-bool LevelObject::operator==(LevelObject other) const
+bool Level::Object::operator==(Object other) const
 {
 	return std::tie(level, drawable_ptr, identifier) == std::tie(other.level, other.drawable_ptr, other.identifier);
-}
-
-LevelObject& LevelObject::operator=(const LevelObject& other)
-{
-	level = other.level;
-	drawable_ptr = other.drawable_ptr;
-	identifier = other.identifier;
-	update = other.update;
-	return *this;
 }
 
 Level::Level()	
@@ -109,7 +211,12 @@ sf::RenderWindow* Level::getWindow() const
 	return m_window_ptr;
 }
 
-bool Level::removeObject(LevelObject obj)
+size_t Level::Object::Hasher::operator()(const Object& obj) const
+{
+	return std::_Hash_array_representation<char>((char*)&obj, sizeof(Object));
+}
+
+bool Level::removeObject(Object obj)
 {
 	if (!isMyObject(obj)) return false;
 	(*obj.level) = nullptr;
@@ -119,10 +226,10 @@ bool Level::removeObject(LevelObject obj)
 	return true;
 }
 
-bool Level::moveObjectUpInUpdateOrder(LevelObject obj, int count)
+bool Level::moveObjectUpInUpdateOrder(Object obj, int count)
 {
 	if (!isMyObject(obj)) return false;
-	size_t pos = std::find(m_update_order.begin(), m_update_order.end(), obj) - m_update_order.begin();
+	size_t pos = getObjectsItrForUpdateList(obj) - m_update_order.begin();
 	if (pos == m_update_order.size()) return false;
 
 	m_update_order.erase(m_update_order.begin() + pos);
@@ -132,44 +239,49 @@ bool Level::moveObjectUpInUpdateOrder(LevelObject obj, int count)
 	return true;
 }
 
-bool Level::moveObjectDownInUpdateOrder(LevelObject obj, int count)
+bool Level::moveObjectDownInUpdateOrder(Object obj, int count)
 {
 	return moveObjectUpInUpdateOrder(obj, -count);
 }
 
-bool Level::updateFirst(LevelObject obj)
+bool Level::updateFirst(Object obj)
 {
 	return moveObjectDownInUpdateOrder(obj, m_update_order.size());
 }
 
-bool Level::updateLast(LevelObject obj)
+bool Level::updateLast(Object obj)
 {
 	return moveObjectUpInUpdateOrder(obj, m_update_order.size());
 }
 
-bool Level::addToUpdateList(LevelObject obj, int position)
+bool Level::addToUpdateList(Object obj, int position)
 {
 	if (!isMyObject(obj)) return false;
-	if(std::find(m_update_order.begin(), m_update_order.end(), obj) != m_update_order.end()) return false;
+	if(isInUpdateList(obj)) return false;
 	if (position < 0) position += m_update_order.size() + 1;
 	position = std::clamp<int>(position, 0, m_update_order.size());
 	m_update_order.insert(m_update_order.begin() + position, obj); 
 	return true;
 }
 
-bool Level::removeFromUpdateList(LevelObject obj)
+bool Level::isInUpdateList(Object obj)
+{
+	return getObjectsItrForUpdateList(obj) != m_update_order.end();
+}
+
+bool Level::removeFromUpdateList(Object obj)
 {
 	if (!isMyObject(obj)) return false;
-	auto itr = std::find(m_update_order.begin(), m_update_order.end(), obj);
+	auto itr = getObjectsItrForUpdateList(obj);
 	if (itr == m_update_order.end()) return false;
 	m_update_order.erase(itr);
 	return true;
 }
 
-bool Level::moveObjectUpInDrawOrder(LevelObject obj, int count)
+bool Level::moveObjectUpInDrawOrder(Object obj, int count)
 {
 	if (!isMyObject(obj)) return false;
-	size_t pos = std::find(m_draw_order.begin(), m_draw_order.end(), obj) - m_draw_order.begin();
+	size_t pos = getObjectsItrForDrawList(obj) - m_draw_order.begin();
 	if (pos == m_draw_order.size()) return false;
 
 	m_draw_order.erase(m_draw_order.begin() + pos);
@@ -179,35 +291,40 @@ bool Level::moveObjectUpInDrawOrder(LevelObject obj, int count)
 	return true;
 }
 
-bool Level::moveObjectDownInDrawOrder(LevelObject obj, int count)
+bool Level::moveObjectDownInDrawOrder(Object obj, int count)
 {
 	return moveObjectUpInDrawOrder(obj, -count);
 }
 
-bool Level::drawFirst(LevelObject obj)
+bool Level::drawFirst(Object obj)
 {
 	return moveObjectDownInDrawOrder(obj, m_draw_order.size());
 }
 
-bool Level::drawLast(LevelObject obj)
+bool Level::drawLast(Object obj)
 {
 	return moveObjectUpInDrawOrder(obj, m_draw_order.size());
 }
 
-bool Level::addToDrawList(LevelObject obj, int position)
+bool Level::addToDrawList(Object obj, int position)
 {
 	if (!isMyObject(obj)) return false;
-	if (std::find(m_draw_order.begin(), m_draw_order.end(), obj) != m_draw_order.end()) return false;
+	if (isInDrawList(obj))return false;
 	if (position < 0) position += m_draw_order.size() + 1;
 	position = std::clamp<int>(position, 0, m_draw_order.size());
 	m_draw_order.insert(m_draw_order.begin() + position, obj);
 	return true;
 }
 
-bool Level::removeFromDrawList(LevelObject obj)
+bool Level::isInDrawList(Object obj)
+{
+	return getObjectsItrForDrawList(obj) != m_draw_order.end();
+}
+
+bool Level::removeFromDrawList(Object obj)
 {
 	if (!isMyObject(obj)) return false;
-	auto itr = std::find(m_draw_order.begin(), m_draw_order.end(), obj);
+	auto itr = getObjectsItrForDrawList(obj);
 	if (itr == m_draw_order.end()) return false;
 	m_draw_order.erase(itr);
 	return true;
@@ -305,20 +422,32 @@ void Level::updateScrolling()
 	if (m_in_scroll)
 	{
 		sf::Time passed_time = m_scroll_timer.getElapsedTime();
-		sf::View view = getCurrentView();
+		SimpleView view = getCurrentView();
 		if (passed_time > m_scrolling_type_ptr->getDuration()) m_in_scroll = false;
-		m_window_ptr->setView(view);
+		m_window_ptr->setView(view.asSFMLView());
 	}
 	else m_view = m_view_destination;
 }
 
-sf::View Level::getCurrentView() const
+SimpleView Level::getCurrentView() const
 {
 	return m_scrolling_type_ptr->getView(m_scroll_timer.getElapsedTime(), m_view, m_view_destination);
 
 }
 
-bool Level::isMyObject(LevelObject obj)
+std::deque<Level::Object>::iterator Level::getObjectsItrForUpdateList(Object obj)
+{
+	if (!isMyObject(obj)) return m_update_order.end();
+	return std::find(m_update_order.begin(), m_update_order.end(), obj);
+}
+
+std::deque<Level::Object>::iterator Level::getObjectsItrForDrawList(Object obj)
+{
+	if (!isMyObject(obj)) return m_draw_order.end();
+	return std::find(m_draw_order.begin(), m_draw_order.end(), obj);
+}
+
+bool Level::isMyObject(Object obj)
 {
 	return **obj.level == m_identifier;
 }
@@ -332,7 +461,7 @@ InstantScrolling::InstantScrolling() :
 	ViewScrolling(sf::Time::Zero)
 {}
 
-sf::View InstantScrolling::getView(sf::Time passed_time, const sf::View & start_view, const sf::View & end_view) const
+SimpleView InstantScrolling::getView(sf::Time passed_time, const SimpleView & start_view, const SimpleView & end_view) const
 {
 	return end_view;
 }
@@ -341,7 +470,7 @@ LinearScrolling::LinearScrolling(sf::Time duration):
 	ViewScrolling(duration)
 {}
 
-sf::View LinearScrolling::getView(sf::Time passed_time, const sf::View & start_view, const sf::View & end_view) const
+SimpleView LinearScrolling::getView(sf::Time passed_time, const SimpleView & start_view, const SimpleView & end_view) const
 {
 	return lerp(start_view, end_view, passed_time / m_duration);
 }
@@ -354,10 +483,12 @@ ExponentialScrolling::ExponentialScrolling(sf::Time duration, float power) :
 	m_polynomial_scale = std::pow(m_exponent_base, -m_turning_point) / std::pow(m_turning_point - 1, m_polynolial_power);
 }
 
-sf::View ExponentialScrolling::getView(sf::Time passed_time, const sf::View & start_view, const sf::View & end_view) const
+SimpleView ExponentialScrolling::getView(sf::Time passed_time, const SimpleView & start_view, const SimpleView & end_view) const
 {
 	float alpha = passed_time / m_duration;
 	alpha = 1 - ((alpha < m_turning_point) ? std::pow(m_exponent_base, -alpha) : m_polynomial_scale * std::pow(alpha - 1, m_polynolial_power));
 	DebugImGui::add_imgui_call("alpha", ImGui::Text, "Exponential alpha: %f, %f", alpha,m_turning_point);
 	return lerp(start_view, end_view, alpha);
 }
+
+
