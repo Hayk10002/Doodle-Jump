@@ -178,7 +178,7 @@ Level::Object::Object(const Object& other):
 	identifier(other.identifier)
 {}
 
-Level::Object Level::Object::get_duplicate()
+Level::Object Level::Object::get_duplicate() const
 {
 	Object obj(*this);
 	obj.identifier = Object::identifier_counter++;
@@ -219,9 +219,9 @@ size_t Level::Object::Hasher::operator()(const Object& obj) const
 bool Level::removeObject(Object obj)
 {
 	if (!isMyObject(obj)) return false;
-	(*obj.level) = nullptr;
 	if(!removeFromUpdateList(obj)) return false;
 	if(!removeFromDrawList(obj)) return false;;
+	(*obj.level) = nullptr;
 	m_objects.erase(obj);
 	return true;
 }
@@ -414,7 +414,11 @@ std::string Level::getScrollingTypeName() const
 void Level::update(sf::Time dt)
 {
 	updateScrolling();
-	for (auto& obj : m_update_order) obj.update(dt);
+	for (int i = 0; i < m_update_order.size(); i++)
+	{
+		if (isMyObject(m_update_order[i])) m_update_order[i].update(dt);
+		else m_update_order.erase(m_update_order.begin() + i--);
+	}
 }
 
 void Level::updateScrolling()
@@ -447,14 +451,30 @@ std::deque<Level::Object>::iterator Level::getObjectsItrForDrawList(Object obj)
 	return std::find(m_draw_order.begin(), m_draw_order.end(), obj);
 }
 
-bool Level::isMyObject(Object obj)
+std::deque<Level::Object>::const_iterator Level::getObjectsItrForUpdateList(Object obj) const
 {
-	return **obj.level == m_identifier;
+	if (!isMyObject(obj)) return m_update_order.end();
+	return std::find(m_update_order.begin(), m_update_order.end(), obj);
+}
+
+std::deque<Level::Object>::const_iterator Level::getObjectsItrForDrawList(Object obj) const
+{
+	if (!isMyObject(obj)) return m_draw_order.end();
+	return std::find(m_draw_order.begin(), m_draw_order.end(), obj);
+}
+
+bool Level::isMyObject(Object obj) const
+{
+	return *obj.level != nullptr && **obj.level == m_identifier;
 }
 
 void Level::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
-	for (auto& obj : m_draw_order) target.draw(*obj.drawable_ptr, states);
+	for (int i = 0; i < m_draw_order.size(); i++)
+	{
+		if (isMyObject(m_draw_order[i])) target.draw(*m_draw_order[i].drawable_ptr, states);
+		else m_draw_order.erase(m_draw_order.begin() + i--);
+	}
 }
 
 InstantScrolling::InstantScrolling() :

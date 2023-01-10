@@ -88,7 +88,7 @@ public:
 	public:
 
 		Object(const Object& other);
-		Object get_duplicate();
+		Object get_duplicate() const;
 		bool operator==(Object other) const;
 		friend class Level;
 	};
@@ -103,6 +103,25 @@ public:
 			object.update = [&obj](sf::Time t) {obj.update(t); };
 		else if constexpr (requires { obj.update(); })
 			object.update = [&obj](sf::Time) {obj.update(); };
+		else object.update = [](sf::Time) {};
+
+		m_objects.insert(object);
+		addToUpdateList(object);
+		addToDrawList(object);
+
+		return object;
+	}
+
+	template<std::derived_from<sf::Drawable> T, class F>
+		requires std::invocable<F> || std::invocable<F, sf::Time>
+	Object addObject(T& obj, F update)
+	{
+		Object object(std::make_shared<const size_t*>(&m_identifier));
+		object.drawable_ptr = &obj;
+		if constexpr (std::invocable<F, sf::Time>)
+			object.update = [&update](sf::Time t) { update(t); };
+		else if constexpr (std::invocable<F>)
+			object.update = [&update](sf::Time) { update(); };
 		else object.update = [](sf::Time) {};
 
 		m_objects.insert(object);
@@ -157,18 +176,21 @@ private:
 
 	std::deque<Object>::iterator getObjectsItrForUpdateList(Object obj);
 	std::deque<Object>::iterator getObjectsItrForDrawList(Object obj);
+	std::deque<Object>::const_iterator getObjectsItrForUpdateList(Object obj) const;
+	std::deque<Object>::const_iterator getObjectsItrForDrawList(Object obj) const;
 
 	SimpleView m_view{}, m_view_destination{};
 	std::unique_ptr<ViewScrolling> m_scrolling_type_ptr{nullptr};
 	std::unordered_set<Object, Object::Hasher> m_objects{};
-	std::deque<Object> m_update_order, m_draw_order;
+	std::deque<Object> m_update_order;
+	mutable std::deque<Object> m_draw_order;
 	sf::Clock m_scroll_timer;
 	bool m_in_scroll{false};
 	sf::RenderWindow* m_window_ptr{nullptr};
 
 	inline static size_t identifier_counter{ 0 };
 	const size_t m_identifier{ identifier_counter++ };
-	bool isMyObject(Object obj);
+	bool isMyObject(Object obj) const;
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 };

@@ -1,5 +1,3 @@
-#include <functional>
-
 #include <SFML/Graphics.hpp>
 
 #include <imgui.h>
@@ -82,19 +80,19 @@ int main()
 
 	//callback functions for user actions
 
-	std::function<void(thor::ActionContext<UserActions>)> onResize = [&level, &window_prev_size](thor::ActionContext<UserActions> context)
+	auto onResize = [&level, &window_prev_size](thor::ActionContext<UserActions> context)
 	{
 		sf::Vector2f scale = { (float)window_prev_size.x / context.event->size.width, (float)window_prev_size.y / context.event->size.height };
 		window_prev_size = { context.event->size.width, context.event->size.height };
 		level.zoom(scale, true);
 	};
 
-	std::function<void(thor::ActionContext<UserActions>)> onZoom = [&level](thor::ActionContext<UserActions> context)
+	auto onZoom = [&level](thor::ActionContext<UserActions> context)
 	{
 		level.zoom(std::pow(1.3f, context.event->mouseWheelScroll.delta));
 	};
 
-	std::function<void()> onMove = [&level, &dt]()
+	auto onMove = [&level, &dt]()
 	{
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) level.scrollLeft(dt.asSeconds() * 1000);
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) level.scrollRight(dt.asSeconds() * 1000);
@@ -102,13 +100,13 @@ int main()
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) level.scrollDown(dt.asSeconds() * 1000);
 	};
 
-	std::function<void()> onRotate = [&level, &dt]()
+	auto onRotate = [&level, &dt]()
 	{
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) level.rotate(dt.asSeconds() * -50);
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::E)) level.rotate(dt.asSeconds() * 50);
 	};
 
-	std::function<void()> onChangeScrollingType = [&level]()
+	auto onChangeScrollingType = [&level]()
 	{
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::I)) level.setScrollingType(InstantScrolling());
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::L)) level.setScrollingType(LinearScrolling(sf::seconds(2)));
