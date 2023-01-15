@@ -27,7 +27,46 @@ enum class UserActions
 	Shoot
 };
 
-
+//class DoodleWithStats : public Doodle
+//{
+//public:
+//	using Doodle::Doodle;
+//	using Doodle::m_velocity;
+//	using Doodle::m_gravity;
+//	using Doodle::m_texture;
+//	using Doodle::m_body;
+//	using Doodle::m_body_normal_exhind;
+//	using Doodle::m_body_shooting_exhind;
+//	using Doodle::m_feet;
+//	using Doodle::m_feet_normal_exhind;
+//	using Doodle::m_feet_shooting_exhind;
+//	using Doodle::m_nose;
+//	using Doodle::m_nose_exhind;
+//	using Doodle::m_body_status;
+//	using Doodle::m_is_jumping;
+//	using Doodle::m_jumping_clock;
+//	using Doodle::m_jumping_interval;
+//	using Doodle::m_is_shooting;
+//	using Doodle::m_shooting_clock;
+//	using Doodle::m_shooting_interval;
+//	using Doodle::m_nose_angle;
+//	using Doodle::m_max_nose_angle_dev;
+//	using Doodle::m_nose_rotation_center;
+//	using Doodle::m_nose_not_shooting_offset;
+//	using Doodle::m_nose_distance_from_rotation_center;
+//	using Doodle::m_jumping_speed;
+//	using Doodle::m_moving_speed;
+//	using Doodle::m_speed_change_rate;
+//	using Doodle::m_speed_decreasing_rate;
+//	using Doodle::m_texture_scale;
+//	using Doodle::m_feet_offset;
+//	using Doodle::m_feet_jumping_offset;
+//	using Doodle::m_area;
+//	using Doodle::m_is_fallen_out;
+//	using Doodle::m_is_too_high;
+//	using Doodle::jump;
+//	using Doodle::draw;
+//};
 
 int main()
 {
@@ -44,7 +83,7 @@ int main()
 
 	//create the background
 	ImageBackground ib(&global_textures["background"], &window);
-
+	
 	Doodle doodle({ 400, 400 });
 
 	//create level
@@ -97,7 +136,7 @@ int main()
 		//updating
 
 		full_time += (dt = deltaClock.restart());
-
+		
 		ImGui::SFML::Update(window, dt);
 		ImGui::Begin("Info");
 		sf::Vector2f position = doodle.getPosition();
@@ -108,7 +147,7 @@ int main()
 		ImGui::Text("Area: {%f, %f, %f, %f}", doodle.getArea().left, doodle.getArea().top, doodle.getArea().width, doodle.getArea().height);
 		ImGui::Text("Is fallen out: %b", doodle.isFallenOutOfScreen());
 		ImGui::Text("Is too high: %b", doodle.isTooHigh());
-		//if (ImGui::IsWindowFocused())  dt = sf::Time::Zero;
+		if (ImGui::IsWindowFocused())  dt = sf::Time::Zero;
 		ImGui::End();
 
 		if (action_map.isActive(UserActions::Close))

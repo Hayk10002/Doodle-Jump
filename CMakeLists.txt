@@ -12,8 +12,12 @@ add_subdirectory(config)
 
 add_subdirectory(common)
 
+add_subdirectory(gameObjects)
+
 add_subdirectory(drawables)
 
 add_subdirectory(level)
 
 add_subdirectory(main)
+
+add_subdirectory(additionalPrograms)

@@ -1,8 +1,8 @@
-set(MainTargetName ${CMAKE_PROJECT_NAME})
+set(DoodleParamsGetterTargetName DoodleParamsGetter)
 
-add_executable(${MainTargetName} main.cpp)
+add_executable(${DoodleParamsGetterTargetName} main.cpp)
 
-target_link_libraries(${MainTargetName} 
+target_link_libraries(${DoodleParamsGetterTargetName} 
         PRIVATE
             config
             AllLibraries
@@ -11,6 +11,8 @@ target_link_libraries(${MainTargetName}
             level
             common
 )
+
+set_target_properties(${DoodleParamsGetterTargetName} PROPERTIES FOLDER "additionalPrograms")
 
 if(USE_SFML)
     include("${AllLibrariesFolderPath}/${SFMLFolderName}/CopySFMLDlls.cmake")
