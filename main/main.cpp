@@ -11,9 +11,11 @@
 #include <DoodleJumpConfig.hpp>
 #include <common/Resources.hpp>
 #include <common/DebugImGui.hpp>
+#include <common/Utils.hpp>
 #include <drawables/ImageBackground.hpp>
 #include <level/level.hpp>
 #include <gameObjects/Doodle.hpp>
+#include <gameObjects/Tiles.hpp>
 
 
 enum class UserActions
@@ -46,11 +48,14 @@ int main()
 	ImageBackground ib(&global_textures["background"], &window);
 
 	Doodle doodle({ 400, 400 });
+	Tiles tiles(window);
+	
 
 	//create level
 	Level level;
-	Level::Object ib_obj = level.addObject(ib);
-	Level::Object doodle_obj = level.addObject(doodle);
+	level.addObject(ib);
+	level.addObject(tiles);
+	level.addObject(doodle);
 	level.setWindow(&window);
 	level.setScrollingType(InstantScrolling());
 
@@ -135,7 +140,7 @@ int main()
 			doodle.shoot(angle + 90);
 		}
 
-		doodle.updateArea(sf::FloatRect{ window.mapPixelToCoords({0, 0}), window.mapPixelToCoords(sf::Vector2i{window.getSize()}) - window.mapPixelToCoords({0, 0}) });
+		doodle.updateArea(utils::getViewArea(window));
 		if (doodle.isFallenOutOfScreen()) doodle.setPosition(window.mapPixelToCoords({ 400, 400 }));
 		if (doodle.isTooHigh()) level.scrollUp(doodle.getArea().top - doodle.getPosition().y);
 		level.update(dt);

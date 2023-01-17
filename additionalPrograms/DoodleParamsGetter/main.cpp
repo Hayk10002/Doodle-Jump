@@ -11,6 +11,7 @@
 #include <DoodleJumpConfig.hpp>
 #include <common/Resources.hpp>
 #include <common/DebugImGui.hpp>
+#include <common/Utils.hpp>
 #include <drawables/ImageBackground.hpp>
 #include <level/level.hpp>
 #include <gameObjects/Doodle.hpp>
@@ -174,7 +175,7 @@ int main()
 			doodle.shoot(angle + 90);
 		}
 
-		doodle.updateArea(sf::FloatRect{ window.mapPixelToCoords({0, 0}), window.mapPixelToCoords(sf::Vector2i{window.getSize()}) - window.mapPixelToCoords({0, 0}) });
+		doodle.updateArea(getViewArea(window));
 		if (doodle.isFallenOutOfScreen()) doodle.setPosition(window.mapPixelToCoords({ 400, 400 }));
 		if (doodle.isTooHigh()) level.scrollUp(doodle.getArea().top - doodle.getPosition().y);
 		level.update(dt);
