@@ -1,5 +1,8 @@
 #include "Doodle.hpp"
 
+#include <common/Utils.hpp>
+#include <gameObjects/Tiles.hpp>
+
 Doodle::Doodle(sf::Vector2f starting_pos)
 {
 	setPosition(starting_pos);
@@ -47,7 +50,8 @@ void Doodle::update(sf::Time dt)
 	m_feet.setRotation(getRotation());
 	m_feet.setScale(getScale());
 	m_feet.scale((m_body_status == Up || m_body_status == Right) ? sf::Vector2f{ 1, 1 } : sf::Vector2f{ -1, 1 });
-	m_feet.scale(m_texture_scale);
+	m_feet.scale(m_texture_scale);							
+	m_feet_collision_box = sf::FloatRect{ getPosition() + utils::element_wiseProduct(m_feet_offset, m_texture_scale) - utils::element_wiseProduct(m_feet_collision_box_size / 2.f, m_texture_scale), utils::element_wiseProduct(m_feet_collision_box_size, m_texture_scale)};
 
 	m_body.set(m_is_shooting ? m_body_shooting_exhind : m_body_normal_exhind);
 	m_body.setPosition(getPosition());
@@ -59,7 +63,7 @@ void Doodle::update(sf::Time dt)
 	m_nose.set(m_nose_exhind);
 	m_nose.setOrigin(m_is_shooting ? sf::Vector2f{ -m_nose_distance_from_rotation_center, 0 } : -m_nose_not_shooting_offset);
 	m_nose.setPosition(getPosition());
-	m_nose.move(m_is_shooting ? sf::Vector2f{m_nose_rotation_center.x * m_texture_scale.x, m_nose_rotation_center.y * m_texture_scale.y} : sf::Vector2f{ 0, 0 });
+	m_nose.move(m_is_shooting ? utils::element_wiseProduct(m_nose_rotation_center, m_texture_scale) : sf::Vector2f{0, 0});
 	m_nose.setRotation(getRotation());
 	m_nose.rotate(m_is_shooting ? (m_nose_angle - 90) : 0);
 	m_nose.setScale(getScale());
@@ -79,6 +83,7 @@ void Doodle::right(sf::Time dt)
 
 void Doodle::shoot(float angle)
 {
+	if (m_is_shooting) return;
 	m_is_shooting = true;
 	m_nose_angle = std::clamp(angle, -m_max_nose_angle_dev, m_max_nose_angle_dev);
 	m_shooting_clock.restart();
@@ -88,6 +93,24 @@ void Doodle::shoot(float angle)
 void Doodle::updateArea(sf::FloatRect area)
 {
 	m_area = sf::FloatRect{ area.left / 2, area.top + area.height / 2, area.width, area.height / 2};
+}
+
+void Doodle::updateTiles(Tiles& tiles)
+{
+	if (m_velocity.y < 0) return;
+	if (tiles.willDoodleJump(m_feet_collision_box)) jump();
+	if (m_feet_collision_box.left + m_feet_collision_box.width > m_area.left + m_area.width)
+	{
+		sf::FloatRect moved_collision_box = m_feet_collision_box;
+		moved_collision_box.left -= m_area.width;
+		if (tiles.willDoodleJump(moved_collision_box)) jump();
+	}
+	if (m_feet_collision_box.left < m_area.left)
+	{
+		sf::FloatRect moved_collision_box = m_feet_collision_box;
+		moved_collision_box.left += m_area.width;
+		if (tiles.willDoodleJump(moved_collision_box)) jump();
+	}
 }
 
 sf::FloatRect Doodle::getArea()

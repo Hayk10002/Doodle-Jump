@@ -8,7 +8,7 @@
 
 #include <common/Resources.hpp>
 
-
+class Tiles;
 //class DoodleWithStats;
 class Doodle : public sf::Drawable, public sf::Transformable
 {
@@ -21,6 +21,7 @@ public:
 	void right(sf::Time dt);
 	void shoot(float angle);
 	void updateArea(sf::FloatRect area);
+	void updateTiles(Tiles& tiles);
 	sf::FloatRect getArea();
 	void setTexture(sf::Texture* texture_ptr);
 	bool isJumping();
@@ -28,9 +29,9 @@ public:
 	bool isFallenOutOfScreen();
 	bool isTooHigh();
 
-	void jump();
 private:
 
+	void jump();
 
 	enum BodyStatus
 	{
@@ -66,6 +67,8 @@ private:
 	float m_speed_decreasing_rate{ 10 };
 	sf::Vector2f m_texture_scale{ 0.15, 0.15 };
 	sf::Vector2f m_feet_offset{0, 195}, m_feet_jumping_offset{0, -25};
+	sf::Vector2f m_feet_collision_box_size{ 270, 60 };
+	sf::FloatRect m_feet_collision_box{};
 	sf::FloatRect m_area{};
 	bool m_is_fallen_out{ 0 }, m_is_too_high{ 0 };
 

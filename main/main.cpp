@@ -23,7 +23,6 @@ enum class UserActions
 	None,
 	Close,
 	Resize,
-	Jump, 
 	Left, 
 	Right,
 	Shoot
@@ -63,7 +62,6 @@ int main()
 	thor::ActionMap<UserActions> action_map;
 	action_map[UserActions::Close] = thor::Action(sf::Event::Closed);
 	action_map[UserActions::Resize] = thor::Action(sf::Event::Resized);
-	action_map[UserActions::Jump] = thor::Action(sf::Keyboard::W, thor::Action::PressOnce);
 	action_map[UserActions::Left] = thor::Action(sf::Keyboard::A, thor::Action::Hold);
 	action_map[UserActions::Right] = thor::Action(sf::Keyboard::D, thor::Action::Hold);
 	action_map[UserActions::Shoot] = thor::Action(sf::Mouse::Left, thor::Action::PressOnce);
@@ -113,6 +111,7 @@ int main()
 		ImGui::Text("Area: {%f, %f, %f, %f}", doodle.getArea().left, doodle.getArea().top, doodle.getArea().width, doodle.getArea().height);
 		ImGui::Text("Is fallen out: %b", doodle.isFallenOutOfScreen());
 		ImGui::Text("Is too high: %b", doodle.isTooHigh());
+		ImGui::Text("Tiles count: %u", tiles.getTilesCount());
 		//if (ImGui::IsWindowFocused())  dt = sf::Time::Zero;
 		ImGui::End();
 
@@ -124,8 +123,6 @@ int main()
 			window_prev_size = { window.getSize().x, window.getSize().y };
 			level.zoom(scale, true);
 		}
-		if (action_map.isActive(UserActions::Jump))
-			doodle.jump();
 		if (action_map.isActive(UserActions::Left))
 			doodle.left(dt);
 		if (action_map.isActive(UserActions::Right))
@@ -141,7 +138,8 @@ int main()
 		}
 
 		doodle.updateArea(utils::getViewArea(window));
-		if (doodle.isFallenOutOfScreen()) doodle.setPosition(window.mapPixelToCoords({ 400, 400 }));
+		doodle.updateTiles(tiles);
+		if (doodle.isFallenOutOfScreen()) doodle.setPosition(doodle.getPosition().x, window.mapPixelToCoords(sf::Vector2i{ window.getSize() } / 2).y);
 		if (doodle.isTooHigh()) level.scrollUp(doodle.getArea().top - doodle.getPosition().y);
 		level.update(dt);
 
@@ -152,6 +150,8 @@ int main()
 		ImGui::SFML::Render(window);
 		window.display();
 	}
+
+
 
 	ImGui::SFML::Shutdown();
 	release_resources();
