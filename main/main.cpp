@@ -13,7 +13,8 @@
 #include <common/DebugImGui.hpp>
 #include <common/Utils.hpp>
 #include <drawables/ImageBackground.hpp>
-#include <level/level.hpp>
+#include <level/Level.hpp>
+#include <level/LevelGenerator.hpp>
 #include <gameObjects/Doodle.hpp>
 #include <gameObjects/Tiles.hpp>
 
@@ -25,7 +26,8 @@ enum class UserActions
 	Resize,
 	Left, 
 	Right,
-	Shoot
+	Shoot,
+	BreakPoint
 };
 
 
@@ -49,6 +51,7 @@ int main()
 	Doodle doodle({ 400, 400 });
 	Tiles tiles(window);
 	
+	LevelGenerator level_generator(&window, &tiles);
 
 	//create level
 	Level level;
@@ -65,6 +68,7 @@ int main()
 	action_map[UserActions::Left] = thor::Action(sf::Keyboard::A, thor::Action::Hold);
 	action_map[UserActions::Right] = thor::Action(sf::Keyboard::D, thor::Action::Hold);
 	action_map[UserActions::Shoot] = thor::Action(sf::Mouse::Left, thor::Action::PressOnce);
+	action_map[UserActions::BreakPoint] = thor::Action(sf::Keyboard::LShift) && thor::Action(sf::Keyboard::Escape);
 
 	//frame clock
 	sf::Clock deltaClock;
@@ -103,8 +107,10 @@ int main()
 
 		ImGui::SFML::Update(window, dt);
 		ImGui::Begin("Info");
+		static float dragging_speed = 100;
+		ImGui::DragFloat("Drag speed", &dragging_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
 		sf::Vector2f position = doodle.getPosition();
-		ImGui::DragFloat2("Position", (float*)&position);
+		ImGui::DragFloat2("Position", (float*)&position, dragging_speed);
 		doodle.setPosition(position);
 		ImGui::Text("Is jumping: %b", doodle.isJumping());
 		ImGui::Text("Is shooting: %b", doodle.isShooting());
@@ -136,7 +142,12 @@ int main()
 			if (angle > 90) angle -= 360;
 			doodle.shoot(angle + 90);
 		}
+		if (action_map.isActive(UserActions::BreakPoint))
+		{
+			int debug = 0;
+		}
 
+		level_generator.update();
 		doodle.updateArea(utils::getViewArea(window));
 		doodle.updateTiles(tiles);
 		if (doodle.isFallenOutOfScreen()) doodle.setPosition(doodle.getPosition().x, window.mapPixelToCoords(sf::Vector2i{ window.getSize() } / 2).y);

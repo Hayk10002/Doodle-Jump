@@ -92,7 +92,7 @@ void Doodle::shoot(float angle)
 
 void Doodle::updateArea(sf::FloatRect area)
 {
-	m_area = sf::FloatRect{ area.left / 2, area.top + area.height / 2, area.width, area.height / 2};
+	m_area = sf::FloatRect{ area.left, area.top + area.height / 2, area.width, area.height / 2};
 }
 
 void Doodle::updateTiles(Tiles& tiles)

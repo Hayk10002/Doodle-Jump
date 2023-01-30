@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <deque>
-#include <coroutine>
 #include <functional>
 
 #include <SFML/Graphics.hpp>
@@ -196,55 +195,12 @@ private:
 
 };
 
-
+class LevelGenerator;
 class Tiles : public sf::Drawable
 {
 private:
-
-	struct TileGenerator {
-
-		struct promise_type;
-		using handle_type = std::coroutine_handle<promise_type>;
-
-		TileGenerator(handle_type h) : coro(h) {} 
-		handle_type coro;
-
-
-		~TileGenerator();
-		TileGenerator(const TileGenerator&) = delete;
-		TileGenerator& operator = (const TileGenerator&) = delete;
-		TileGenerator(TileGenerator&& oth) noexcept;
-		TileGenerator& operator=(TileGenerator&& oth) noexcept;
-		std::unique_ptr<Tile> getValue();
-		bool next();
-
-		std::unique_ptr<Tile> getNextValue();
-		struct promise_type {
-			promise_type() = default;
-			promise_type(const promise_type&) = delete;
-			promise_type(promise_type&& oth) = default;
-			promise_type& operator=(const promise_type&) = delete;
-			promise_type& operator=(promise_type&& oth) = default;
-			~promise_type() = default;
-
-			auto initial_suspend();
-			auto final_suspend() noexcept;
-			auto get_return_object();
-			auto return_void() {};
-
-			auto yield_value(Tile* value);
-			void unhandled_exception();
-			std::unique_ptr<Tile> current_value{nullptr};
-		};
-
-	};
-
-
 	std::deque<std::unique_ptr<Tile>> m_tiles;
-	TileGenerator m_tile_generator;
 	sf::RenderWindow& m_game_window;
-	bool m_more_tiles{ 1 };
-	TileGenerator get_tile_generator();
 
 public:
 	Tiles(sf::RenderWindow& game_window);
@@ -254,6 +210,6 @@ public:
 
 private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
-
+	friend class LevelGenerator;
 
 };
