@@ -44,31 +44,9 @@ void Doodle::update(sf::Time dt)
 	if (m_velocity.x > 0 && !m_is_shooting) m_body_status = Right;
 	if (m_velocity.x < 0 && !m_is_shooting) m_body_status = Left;
 
-	m_feet.set(m_is_shooting ? m_feet_shooting_exhind : m_feet_normal_exhind);
-	m_feet.setOrigin(m_is_jumping ? -m_feet_offset - m_feet_jumping_offset : -m_feet_offset);
-	m_feet.setPosition(getPosition());
-	m_feet.setRotation(getRotation());
-	m_feet.setScale(getScale());
-	m_feet.scale((m_body_status == Up || m_body_status == Right) ? sf::Vector2f{ 1, 1 } : sf::Vector2f{ -1, 1 });
-	m_feet.scale(m_texture_scale);							
 	m_feet_collision_box = sf::FloatRect{ getPosition() + utils::element_wiseProduct(m_feet_offset, m_texture_scale) - utils::element_wiseProduct(m_feet_collision_box_size / 2.f, m_texture_scale), utils::element_wiseProduct(m_feet_collision_box_size, m_texture_scale)};
-
-	m_body.set(m_is_shooting ? m_body_shooting_exhind : m_body_normal_exhind);
-	m_body.setPosition(getPosition());
-	m_body.setRotation(getRotation());
-	m_body.setScale(getScale());
-	m_body.scale((m_body_status == Up || m_body_status == Right) ? sf::Vector2f{ 1, 1 } : sf::Vector2f{ -1, 1 });
-	m_body.scale(m_texture_scale);
-
-	m_nose.set(m_nose_exhind);
-	m_nose.setOrigin(m_is_shooting ? sf::Vector2f{ -m_nose_distance_from_rotation_center, 0 } : -m_nose_not_shooting_offset);
-	m_nose.setPosition(getPosition());
-	m_nose.move(m_is_shooting ? utils::element_wiseProduct(m_nose_rotation_center, m_texture_scale) : sf::Vector2f{0, 0});
-	m_nose.setRotation(getRotation());
-	m_nose.rotate(m_is_shooting ? (m_nose_angle - 90) : 0);
-	m_nose.setScale(getScale());
-	m_nose.scale((m_body_status == Up || m_body_status == Right) ? sf::Vector2f{ 1, 1 } : sf::Vector2f{ -1, 1 });
-	m_nose.scale(m_texture_scale);
+	m_body_collision_box = sf::FloatRect{ getPosition() - utils::element_wiseProduct(m_body_collision_box_size / 2.f, m_texture_scale), utils::element_wiseProduct(m_body_collision_box_size, m_texture_scale) };
+	m_is_updating_for_drawing_needed = true;
 }
 
 void Doodle::left(sf::Time dt)
@@ -99,18 +77,11 @@ void Doodle::updateTiles(Tiles& tiles)
 {
 	if (m_velocity.y < 0) return;
 	if (tiles.willDoodleJump(m_feet_collision_box)) jump();
-	if (m_feet_collision_box.left + m_feet_collision_box.width > m_area.left + m_area.width)
-	{
-		sf::FloatRect moved_collision_box = m_feet_collision_box;
-		moved_collision_box.left -= m_area.width;
-		if (tiles.willDoodleJump(moved_collision_box)) jump();
-	}
-	if (m_feet_collision_box.left < m_area.left)
-	{
-		sf::FloatRect moved_collision_box = m_feet_collision_box;
-		moved_collision_box.left += m_area.width;
-		if (tiles.willDoodleJump(moved_collision_box)) jump();
-	}
+}
+
+void Doodle::updateItems(Items& items)
+{
+	items.updateDoodleCollisions(this);
 }
 
 sf::FloatRect Doodle::getArea()
@@ -143,47 +114,104 @@ bool Doodle::isTooHigh()
 	return m_is_too_high;
 }
 
+sf::Vector2f Doodle::getVelocity() const
+{
+	return m_velocity;
+}
+
+sf::Vector2f Doodle::getGravity() const
+{
+	return m_gravity;
+}
+
+float Doodle::getJumpingSpeed() const
+{
+	return m_jumping_speed;
+}
+
+sf::FloatRect Doodle::getFeetCollisionBox() const
+{
+	return m_feet_collision_box;
+}
+
+sf::FloatRect Doodle::getBodyCollisionBox() const
+{
+	return m_body_collision_box;
+}
+
 void Doodle::jump()
 {
+	if (m_velocity.y < 0) return;
 	m_is_jumping = true;
 	m_velocity.y = -m_jumping_speed;
 	m_jumping_clock.restart();
 }
 
+void Doodle::setVelocity(sf::Vector2f velocity)
+{
+	m_velocity = velocity;
+}
+
+void Doodle::setGravity(sf::Vector2f gravity)
+{
+	m_gravity = gravity;
+}
+
+void Doodle::setJumpingSpeed(float speed)
+{
+	m_jumping_speed = speed;
+}
+
+void Doodle::updateForDrawing() const
+{
+	if(m_is_updating_for_drawing_needed)
+	{
+		m_feet.set(m_is_shooting ? m_feet_shooting_exhind : m_feet_normal_exhind);
+		m_feet.setOrigin(m_is_jumping ? -m_feet_offset - m_feet_jumping_offset : -m_feet_offset);
+		m_feet.setPosition(getPosition());
+		m_feet.setRotation(getRotation());
+		m_feet.setScale(getScale());
+		m_feet.scale((m_body_status == Up || m_body_status == Right) ? sf::Vector2f{ 1, 1 } : sf::Vector2f{ -1, 1 });
+		m_feet.scale(m_texture_scale);
+
+		m_body.set(m_is_shooting ? m_body_shooting_exhind : m_body_normal_exhind);
+		m_body.setPosition(getPosition());
+		m_body.setRotation(getRotation());
+		m_body.setScale(getScale());
+		m_body.scale((m_body_status == Up || m_body_status == Right) ? sf::Vector2f{ 1, 1 } : sf::Vector2f{ -1, 1 });
+		m_body.scale(m_texture_scale);
+
+		m_nose.set(m_nose_exhind);
+		m_nose.setOrigin(m_is_shooting ? sf::Vector2f{ -m_nose_distance_from_rotation_center, 0 } : -m_nose_not_shooting_offset);
+		m_nose.setPosition(getPosition());
+		m_nose.move(m_is_shooting ? utils::element_wiseProduct(m_nose_rotation_center, m_texture_scale) : sf::Vector2f{ 0, 0 });
+		m_nose.setRotation(getRotation());
+		m_nose.rotate(m_is_shooting ? (m_nose_angle - 90) : 0);
+		m_nose.setScale(getScale());
+		m_nose.scale((m_body_status == Up || m_body_status == Right) ? sf::Vector2f{ 1, 1 } : sf::Vector2f{ -1, 1 });
+		m_nose.scale(m_texture_scale);
+
+		m_is_updating_for_drawing_needed = false;
+	}
+}
+
 void Doodle::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
+	updateForDrawing();
+
 	target.draw(m_feet, states);
 	target.draw(m_body, states);
 	target.draw(m_nose, states);
 
 	sf::FloatRect m_body_bound = m_body.getGlobalBounds();
-	if (m_body_bound.left + m_body_bound.width > m_area.left + m_area.width);
-	{
-		m_feet.move(-m_area.width, 0);
-		m_body.move(-m_area.width, 0);
-		m_nose.move(-m_area.width, 0);
 
-		target.draw(m_feet, states);
-		target.draw(m_body, states);
-		target.draw(m_nose, states);
+	/*sf::RectangleShape sh_feet{ {m_feet_collision_box.width, m_feet_collision_box.height} };
+	sh_feet.setPosition(m_feet_collision_box.left, m_feet_collision_box.top);
+	sh_feet.setFillColor(sf::Color(255, 0, 0, 100));
+	target.draw(sh_feet, states); 
 
-		m_feet.move(m_area.width, 0);
-		m_body.move(m_area.width, 0);
-		m_nose.move(m_area.width, 0);
-	}
-
-	if (m_body_bound.left < m_area.left);
-	{
-		m_feet.move(m_area.width, 0);
-		m_body.move(m_area.width, 0);
-		m_nose.move(m_area.width, 0);
-
-		target.draw(m_feet, states);
-		target.draw(m_body, states);
-		target.draw(m_nose, states);
-
-		m_feet.move(-m_area.width, 0);
-		m_body.move(-m_area.width, 0);
-		m_nose.move(-m_area.width, 0);
-	}
+	sf::RectangleShape sh_body{ {m_body_collision_box.width, m_body_collision_box.height} };
+	sh_body.setPosition(m_body_collision_box.left, m_body_collision_box.top);
+	sh_body.setFillColor(sf::Color(255, 0, 0, 100));
+	target.draw(sh_body, states);*/
 }

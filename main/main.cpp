@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <SFML/Graphics.hpp>
 
 #include <imgui.h>
@@ -35,8 +37,9 @@ enum class UserActions
 int main()
 {
 	//setup the window
-	sf::RenderWindow window(sf::VideoMode(800, 800), "Doodle Jump");
+	sf::RenderWindow window(sf::VideoMode(528, 800), "Doodle Jump");
 	sf::Vector2u window_prev_size(window.getSize());
+	window.setKeyRepeatEnabled(false);
 
 	//setup Dear ImGui
 	ImGui::SFML::Init(window);
@@ -50,14 +53,20 @@ int main()
 
 	Doodle doodle({ 400, 400 });
 	Tiles tiles(window);
-	
-	LevelGenerator level_generator(&window, &tiles);
+	Items items(window);
+
+	LevelGenerator level_generator(&window, &tiles, &items);
 
 	//create level
 	Level level;
 	level.addObject(ib);
 	level.addObject(tiles);
-	level.addObject(doodle);
+	auto items_obj = level.addObject(items);
+	auto doodle_obj = level.addObject(doodle);
+	auto doodle_dupl_obj = doodle_obj.get_duplicate();
+	doodle_dupl_obj.setUpdate([&doodle]() {doodle.updateForDrawing(); });
+	level.moveObjectUpInUpdateOrder(items_obj);
+	level.addToUpdateList(doodle_dupl_obj);
 	level.setWindow(&window);
 	level.setScrollingType(InstantScrolling());
 
@@ -105,6 +114,7 @@ int main()
 
 		full_time += (dt = deltaClock.restart());
 
+		
 		ImGui::SFML::Update(window, dt);
 		ImGui::Begin("Info");
 		static float dragging_speed = 100;
@@ -112,12 +122,7 @@ int main()
 		sf::Vector2f position = doodle.getPosition();
 		ImGui::DragFloat2("Position", (float*)&position, dragging_speed);
 		doodle.setPosition(position);
-		ImGui::Text("Is jumping: %b", doodle.isJumping());
-		ImGui::Text("Is shooting: %b", doodle.isShooting());
 		ImGui::Text("Area: {%f, %f, %f, %f}", doodle.getArea().left, doodle.getArea().top, doodle.getArea().width, doodle.getArea().height);
-		ImGui::Text("Is fallen out: %b", doodle.isFallenOutOfScreen());
-		ImGui::Text("Is too high: %b", doodle.isTooHigh());
-		ImGui::Text("Tiles count: %u", tiles.getTilesCount());
 		//if (ImGui::IsWindowFocused())  dt = sf::Time::Zero;
 		ImGui::End();
 
@@ -150,11 +155,12 @@ int main()
 		level_generator.update();
 		doodle.updateArea(utils::getViewArea(window));
 		doodle.updateTiles(tiles);
+		doodle.updateItems(items);
 		if (doodle.isFallenOutOfScreen()) doodle.setPosition(doodle.getPosition().x, window.mapPixelToCoords(sf::Vector2i{ window.getSize() } / 2).y);
+		level.updateObjects(dt);
 		if (doodle.isTooHigh()) level.scrollUp(doodle.getArea().top - doodle.getPosition().y);
-		level.update(dt);
-
-
+		level.updateScrolling();
+	
 		//drawing
 		window.clear();
 		window.draw(level);

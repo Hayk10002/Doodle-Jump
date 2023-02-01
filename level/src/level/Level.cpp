@@ -411,9 +411,8 @@ std::string Level::getScrollingTypeName() const
 	return m_scrolling_type_ptr->getName();
 }
 
-void Level::update(sf::Time dt)
+void Level::updateObjects(sf::Time dt)
 {
-	updateScrolling();
 	for (int i = 0; i < m_update_order.size(); i++)
 	{
 		if (isMyObject(m_update_order[i])) m_update_order[i].update(dt);

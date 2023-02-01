@@ -89,6 +89,16 @@ public:
 
 		Object(const Object& other);
 		Object get_duplicate() const;
+		template<class F>
+			requires std::invocable<F> || std::invocable<F, sf::Time>
+		void setUpdate(F&& update_function)
+		{
+			if constexpr (requires { update_function(sf::Time::Zero); })
+				update = [&update_function](sf::Time t) {update_function(t); };
+			else if constexpr (requires { update_function(); })
+				update = [&update_function](sf::Time) {update_function(); };
+			else update = [](sf::Time) {};
+		}
 		bool operator==(Object other) const;
 		friend class Level;
 	};
@@ -114,7 +124,7 @@ public:
 
 	template<std::derived_from<sf::Drawable> T, class F>
 		requires std::invocable<F> || std::invocable<F, sf::Time>
-	Object addObject(T& obj, F update)
+	Object addObject(T& obj, F&& update)
 	{
 		Object object(std::make_shared<const size_t*>(&m_identifier));
 		object.drawable_ptr = &obj;
@@ -167,7 +177,7 @@ public:
 	}
 	std::string getScrollingTypeName() const;
 
-	void update(sf::Time dt);
+	void updateObjects(sf::Time dt);
 	void updateScrolling();
 
 	SimpleView getCurrentView() const;

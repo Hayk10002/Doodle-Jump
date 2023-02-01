@@ -20,9 +20,29 @@ sf::FloatRect Tile::getCollisionBox() const
 	return m_collision_box;
 }
 
+sf::Vector2f Tile::getCollisionBoxSize() const
+{
+	return m_collision_box_size;
+}
+
 bool Tile::isDestroyed() const
 {
 	return false;
+}
+
+bool Tile::isReadyToBeDeleted() const
+{
+	return m_is_ready_to_be_deleted;
+}
+
+bool Tile::isFallenOffScreen() const
+{
+	return m_is_fallen_off_screen;
+}
+
+void Tile::setReadyToBeDeleted(bool is_ready)
+{
+	m_is_ready_to_be_deleted = is_ready;
 }
 
 void Tile::setSpecUpdate(std::function<void(sf::Time)> spec_update)
@@ -49,6 +69,7 @@ void Tile::draw(sf::RenderTarget& target, sf::RenderStates states) const
 NormalTile::NormalTile() :
 	Tile(&global_textures["tiles"])
 {
+	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
 	default_animation.addFrame(1, { 0, 0, 128, 40 }, { 64, 20 });
@@ -67,6 +88,7 @@ HorizontalSlidingTile::HorizontalSlidingTile(float speed):
 	Tile(&global_textures["tiles"]),
 	m_speed(speed)
 {
+	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
 	default_animation.addFrame(1, { 0, 40, 128, 40 }, { 64, 20 });
@@ -106,6 +128,7 @@ VerticalSlidingTile::VerticalSlidingTile(float speed):
 	Tile(&global_textures["tiles"]),
 	m_speed(speed)
 {
+	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
 	default_animation.addFrame(1, { 0, 80, 128, 40 }, { 64, 20 });
@@ -148,6 +171,7 @@ DecayedTile::DecayedTile(float speed) :
 	Tile(&global_textures["tiles"]),
 	m_speed(speed)
 {
+	m_collision_box_size = sf::Vector2f{ 120, 30 } *m_texture_scale;
 	setDoodleJumpCallback([this]() 
 	{
 		m_is_breaked = 1;
@@ -201,6 +225,7 @@ BombTile::BombTile(float exploding_height):
 	Tile(&global_textures["tiles"]),
 	m_exploding_height(exploding_height)
 {
+	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setDoodleJumpCallback([this]() 
 	{
 		if (!m_is_started_exploding)
@@ -262,6 +287,7 @@ void BombTile::startExploding()
 OneTimeTile::OneTimeTile():
 	Tile(&global_textures["tiles"])
 {
+	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setDoodleJumpCallback([this]()
 	{
 		m_animator.play() 
@@ -298,6 +324,7 @@ bool OneTimeTile::isDestroyed() const
 TeleportTile::TeleportTile() :
 	Tile(&global_textures["tiles"])
 {
+	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setDoodleJumpCallback([this]()
 	{
 		if (m_current_offset_index < m_offsets.size()) next();
@@ -383,6 +410,7 @@ ClusterTile::ClusterTile(Id id):
 	Tile(&global_textures["tiles"]),
 	m_id(id)
 {
+	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setDoodleJumpCallback([this]()
 	{
 		next();
@@ -398,8 +426,6 @@ ClusterTile::ClusterTile(Id id):
 
 ClusterTile::ClusterTile(const ClusterTile& oth) :
 	Tile(oth),
-	m_texture_scale(oth.m_texture_scale),
-	m_collision_box_size(oth.m_collision_box_size),
 	m_offsets(oth.m_offsets),
 	m_current_offset_index(oth.m_current_offset_index),
 	m_existing_time(oth.m_existing_time),
@@ -415,8 +441,6 @@ ClusterTile::ClusterTile(const ClusterTile& oth) :
 
 ClusterTile::ClusterTile(ClusterTile&& oth) noexcept:
 	Tile(std::move(oth)),
-	m_texture_scale(std::move(oth.m_texture_scale)),
-	m_collision_box_size(std::move(oth.m_collision_box_size)),
 	m_offsets(std::move(oth.m_offsets)),
 	m_current_offset_index(std::move(oth.m_current_offset_index)),
 	m_existing_time(std::move(oth.m_existing_time)),
@@ -435,8 +459,6 @@ ClusterTile& ClusterTile::operator=(const ClusterTile& oth)
 {
 	m_id.removeTile(this);
 	this->Tile::operator=(oth);
-	m_texture_scale = oth.m_texture_scale;
-	m_collision_box_size = oth.m_collision_box_size;
 	m_offsets = oth.m_offsets;
 	m_current_offset_index = oth.m_current_offset_index;
 	m_existing_time = oth.m_existing_time;
@@ -454,8 +476,6 @@ ClusterTile& ClusterTile::operator=(ClusterTile&& oth) noexcept
 {
 	m_id.removeTile(this);
 	this->Tile::operator=(std::move(oth));
-	m_texture_scale = std::move(oth.m_texture_scale);
-	m_collision_box_size = std::move(oth.m_collision_box_size);
 	m_offsets = std::move(oth.m_offsets);
 	m_current_offset_index = std::move(oth.m_current_offset_index);
 	m_existing_time = std::move(oth.m_existing_time);
@@ -530,179 +550,24 @@ void ClusterTile::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	target.draw(copy, states);
 }
 
-
-
-
-Tiles::TileGenerator::~TileGenerator() 
-{
-	if (coro) coro.destroy();
-}
-
-Tiles::TileGenerator::TileGenerator(TileGenerator&& oth) noexcept : coro(oth.coro) 
-{
-	oth.coro = nullptr;
-}
-
-Tiles::TileGenerator& Tiles::TileGenerator::operator=(TileGenerator&& oth) noexcept
-{
-	coro = std::exchange(oth.coro, nullptr);
-	return *this;
-}
-
-std::unique_ptr<Tile> Tiles::TileGenerator::getValue() 
-{
-	return std::move(coro.promise().current_value);
-}
-
-bool Tiles::TileGenerator::next()
-{
-	if(!coro.done()) coro.resume();
-	return !coro.done();
-}
-
-std::unique_ptr<Tile> Tiles::TileGenerator::getNextValue()
-{
-	if (next()) return getValue();
-	return std::unique_ptr<Tile>(nullptr);
-}
-
-auto Tiles::TileGenerator::promise_type::initial_suspend()
-{
-	return std::suspend_always{};
-}
-
-auto Tiles::TileGenerator::promise_type::final_suspend() noexcept 
-{
-	return std::suspend_always{};
-}
-
-auto Tiles::TileGenerator::promise_type::get_return_object() 
-{
-	return TileGenerator{ handle_type::from_promise(*this) };
-}
-
-auto Tiles::TileGenerator::promise_type::yield_value(Tile* value) 
-{
-	current_value = std::unique_ptr<Tile>(value);
-	return std::suspend_always{};
-}
-
-void Tiles::TileGenerator::promise_type::unhandled_exception() 
-{
-	throw std::current_exception();
-}
-
-Tiles::TileGenerator Tiles::get_tile_generator()
-{
-	ClusterTile::Id ids[2] = { ClusterTile::Id(), ClusterTile::Id() };
-
-	for(size_t i = 0; i < 15; i++)
-	{
-		m_more_tiles = 0;
-		sf::FloatRect spawn_area = utils::getViewArea(m_game_window);
-		auto m_tile_position_distribition = thor::Distributions::rect({ spawn_area.left + spawn_area.width / 2.f, spawn_area.top + spawn_area.height / 2.f }, {spawn_area.width / 2.f, spawn_area.height / 2.f});
-
-		switch (8) 
-		{
-		case 1:
-			{
-				NormalTile* tile = new NormalTile();
-				tile->setPosition(m_tile_position_distribition());
-				co_yield tile;
-				break;
-			}
-		case 2:
-			{
-				HorizontalSlidingTile* tile = new HorizontalSlidingTile(thor::Distributions::uniform(-300, 300)());
-				tile->setPosition(m_tile_position_distribition());
-				tile->setSpecUpdate([this, tile](sf::Time)
-				{
-					tile->updateMovingLocation(utils::getViewArea(m_game_window));
-				});
-				co_yield tile;
-				break;
-			}
-		case 3:
-			{
-				VerticalSlidingTile* tile = new VerticalSlidingTile(thor::Distributions::uniform(-300, 300)());
-				tile->setPosition(m_tile_position_distribition());
-				tile->setSpecUpdate([this, tile](sf::Time)
-				{
-					tile->updateMovingLocation(utils::getViewArea(m_game_window));
-				});
-				co_yield tile;
-				break;
-			}
-		case 4:
-			{
-				DecayedTile* tile = new DecayedTile((thor::Distributions::uniform(0, 1)()) ? 0 : thor::Distributions::uniform(-300, 300)());
-				tile->setPosition(m_tile_position_distribition());
-				tile->setSpecUpdate([this, tile](sf::Time)
-				{
-					tile->updateMovingLocation(utils::getViewArea(m_game_window));
-				});
-				co_yield tile;
-				break;
-			}
-		case 5:
-			{
-				BombTile* tile = new BombTile(thor::Distributions::uniform(-(float)m_game_window.getSize().y / 2.f, (float)m_game_window.getSize().y / 2.f)());
-				tile->setPosition(m_tile_position_distribition());
-				tile->setSpecUpdate([this, tile](sf::Time)
-				{
-					tile->updateHeight(m_game_window.mapCoordsToPixel(tile->getPosition()).y - m_game_window.getSize().y / 2.f);
-				});
-				co_yield tile;
-				break;
-			}
-		case 6:
-			{
-				OneTimeTile* tile = new OneTimeTile();
-				tile->setPosition(m_tile_position_distribition());
-				co_yield tile;
-				break;
-			}
-		case 7:
-			{
-				TeleportTile* tile = new TeleportTile();
-				tile->setPosition(m_tile_position_distribition());
-				size_t count = thor::Distributions::uniform(3, 6)();
-				auto offset_dist = thor::Distributions::rect({0, 0}, { 200, 200 });
-				for (size_t i = 0; i < count; i++) tile->addNewPosition(offset_dist());
-				co_yield tile;
-				break;
-			}
-		case 8:
-			{
-				ClusterTile* tile = new ClusterTile(ids[thor::Distributions::uniform(0, 1)()]);
-				tile->setPosition(m_tile_position_distribition());
-				size_t count = thor::Distributions::uniform(3, 6)();
-				auto offset_dist = thor::Distributions::rect({ 0, 0 }, { 200, 200 });
-				for (size_t i = 0; i < count; i++) tile->addNewPosition({offset_dist().x, 0});
-				co_yield tile;
-				break;
-			}
-		}
-
-	}
-}
-
 Tiles::Tiles(sf::RenderWindow& game_window):
-	m_game_window(game_window),
-	m_tile_generator(get_tile_generator())
+	m_game_window(game_window)
 {
 }
 
 void Tiles::update(sf::Time dt)
 {
-	while (m_more_tiles && m_tile_generator.next()) if (auto val = m_tile_generator.getValue(); val) m_tiles.push_back(std::move(val));
-	m_more_tiles = 1;
-
-	for (auto& tile : m_tiles) tile->update(dt);
+	for (auto& tile : m_tiles)
+	{
+		tile->update(dt);
+		if (sf::FloatRect area = utils::getViewArea(m_game_window); tile->getCollisionBox().top > area.top + area.height)
+			tile->m_is_fallen_off_screen = true;
+	}
 
 	for (size_t i = 0; i < m_tiles.size(); i++)
-		if (m_tiles[i]->isDestroyed() || !m_tiles[i]->getCollisionBox().intersects(utils::getViewArea(m_game_window)))
-			m_tiles.erase(m_tiles.begin() + i--);
+		if (sf::FloatRect area = utils::getViewArea(m_game_window); m_tiles[i]->isDestroyed() || m_tiles[i]->getCollisionBox().top > area.top + area.height)
+			if(m_tiles[i]->isReadyToBeDeleted())
+				m_tiles.erase(m_tiles.begin() + i--);
 }
 
 bool Tiles::willDoodleJump(sf::FloatRect doodle_feet)

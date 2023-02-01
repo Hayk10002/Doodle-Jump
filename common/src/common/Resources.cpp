@@ -15,6 +15,7 @@ void init_resources()
 
 	global_textures.acquire("doodle", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"doodle_basic.png"));
 	global_textures.acquire("tiles", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"tiles.png"));
+	global_textures.acquire("items", thor::Resources::fromFile<sf::Texture>(RESOURCES_PATH"items.png"));
 }
 
 void release_resources()
@@ -23,4 +24,5 @@ void release_resources()
 	global_textures.release("empty_white_texture");
 	global_textures.release("doodle");
 	global_textures.release("tiles");
+	global_textures.release("items");
 }

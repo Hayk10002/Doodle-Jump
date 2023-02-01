@@ -4,6 +4,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <gameObjects/Tiles.hpp>
+#include <gameObjects/Items.hpp>
 
 class LevelGenerator
 {
@@ -39,11 +40,12 @@ class LevelGenerator
 	};
 
 public:
-	LevelGenerator(sf::RenderWindow* window, Tiles* tiles);
+	LevelGenerator(sf::RenderWindow* window, Tiles* tiles, Items* items);
 	void update();
 
 private:
 	Tiles* m_tiles;
+	Items* m_items;
 	sf::RenderWindow* m_window;
 	Generator m_generator;
 	float m_generated_height{};

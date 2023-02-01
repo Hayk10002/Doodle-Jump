@@ -18,7 +18,11 @@ public:
 	Tile& operator=(Tile&&) = default;
 
 	sf::FloatRect getCollisionBox() const;
+	sf::Vector2f getCollisionBoxSize() const;
 	virtual bool isDestroyed() const;
+	bool isReadyToBeDeleted() const;
+	bool isFallenOffScreen() const;
+	void setReadyToBeDeleted(bool is_ready);
 	virtual void update(sf::Time) = 0;
 	void setSpecUpdate(std::function<void(sf::Time)> spec_update);
 	void setDoodleJumpCallback(std::function<bool()> on_doodle_jump);
@@ -29,19 +33,21 @@ protected:
 	std::shared_ptr<thor::AnimationMap<sf::Sprite, std::string>> m_animations;
 	thor::Animator<sf::Sprite, std::string> m_animator;
 	sf::FloatRect m_collision_box{};
+	sf::Vector2f m_collision_box_size{};
+	float m_texture_scale{ 0.65 };
 	std::function<void(sf::Time)> m_spec_update{ [](sf::Time) {} };
 	std::function<bool()> m_on_doodle_jump{ []() {return true; } };
 
 private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+	bool m_is_ready_to_be_deleted{ 1 };
+	bool m_is_fallen_off_screen{ 0 };
 
 	friend class Tiles;
 };
 
 class NormalTile : public Tile
 {
-	float m_texture_scale{ 0.65 };
-	sf::Vector2f m_collision_box_size{ sf::Vector2f{114, 30} * m_texture_scale };
 public:
 	NormalTile();
 
@@ -50,8 +56,6 @@ public:
 
 class HorizontalSlidingTile: public Tile
 {
-	float m_texture_scale{ 0.65 };
-	sf::Vector2f m_collision_box_size{ sf::Vector2f{114, 30} * m_texture_scale };
 	float m_speed;
 	float m_left{0}, m_right{-1};
 public:
@@ -65,8 +69,6 @@ public:
 
 class VerticalSlidingTile : public Tile
 {
-	float m_texture_scale{ 0.65 };
-	sf::Vector2f m_collision_box_size{ sf::Vector2f{114, 30} * m_texture_scale };
 	float m_speed;
 	float m_top{0}, m_bottom{-1};
 	sf::FloatRect m_area{};
@@ -80,8 +82,6 @@ public:
 
 class DecayedTile : public Tile
 {
-	float m_texture_scale{ 0.65 };
-	sf::Vector2f m_collision_box_size{ sf::Vector2f{120, 30} * m_texture_scale };
 	float m_speed, m_vert_speed{0}, m_gravity{1200};
 	float m_left{ 0 }, m_right{ -1 };
 	
@@ -98,8 +98,6 @@ public:
 
 class BombTile : public Tile
 {
-	float m_texture_scale{ 0.65 };
-	sf::Vector2f m_collision_box_size{ sf::Vector2f{114, 30} * m_texture_scale };
 	bool m_is_started_exploding{ 0 }, m_is_exploded{ 0 }, m_is_gone{ 0 };
 	float m_exploding_height, m_current_height{};
 
@@ -116,8 +114,6 @@ private:
 
 class OneTimeTile : public Tile
 {
-	float m_texture_scale{ 0.65 };
-	sf::Vector2f m_collision_box_size{ sf::Vector2f{114, 30} * m_texture_scale };
 	bool m_is_gone{ 0 };
 
 public:
@@ -129,9 +125,7 @@ public:
 
 class TeleportTile : public Tile
 {
-	float m_texture_scale{ 0.65 };
-	sf::Vector2f m_collision_box_size{ sf::Vector2f{114, 30} *m_texture_scale };
-
+	
 	std::deque<sf::Vector2f> m_offsets{ {0, 0} };
 	size_t m_current_offset_index{ 0 };
 
@@ -150,9 +144,7 @@ private:
 
 class ClusterTile : public Tile
 {
-	float m_texture_scale{ 0.65 };
-	sf::Vector2f m_collision_box_size{ sf::Vector2f{114, 30} *m_texture_scale };
-
+	
 	std::deque<sf::Vector2f> m_offsets{ {0, 0} };
 	size_t m_current_offset_index{ 0 };
 	sf::Time m_existing_time{}, m_transition_start{}, m_transition_duration{sf::seconds(0.2)}, m_oscillating_duration{sf::seconds(0.3)};
