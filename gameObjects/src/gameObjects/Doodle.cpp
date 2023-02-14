@@ -25,7 +25,7 @@ void Doodle::update(sf::Time dt)
 	if (m_is_jumping) if (m_jumping_clock.getElapsedTime() > m_jumping_interval) m_is_jumping = false;
 	if (m_is_shooting)
 	{
-		if (m_shooting_clock.getElapsedTime() > m_shooting_interval) m_is_shooting = false;
+		if (m_shooting_clock.getElapsedTime() > m_shooting_interval || !m_can_shoot) m_is_shooting = false;
 		m_body_status = Up;
 	}
 
@@ -61,7 +61,7 @@ void Doodle::right(sf::Time dt)
 
 void Doodle::shoot(float angle)
 {
-	if (m_is_shooting) return;
+	if (!m_can_shoot || m_is_shooting) return;
 	m_is_shooting = true;
 	m_nose_angle = std::clamp(angle, -m_max_nose_angle_dev, m_max_nose_angle_dev);
 	m_shooting_clock.restart();
@@ -84,7 +84,7 @@ void Doodle::updateItems(Items& items)
 	items.updateDoodleCollisions(this);
 }
 
-sf::FloatRect Doodle::getArea()
+sf::FloatRect Doodle::getArea() const
 {
 	return m_area;
 }
@@ -94,24 +94,49 @@ void Doodle::setTexture(sf::Texture* texture_ptr)
 	if(texture_ptr) m_texture = texture_ptr;
 }
 
-bool Doodle::isJumping()
+bool Doodle::isJumping() const
 {
 	return m_is_jumping;
 }
 
-bool Doodle::isShooting()
+bool Doodle::isShooting() const
 {
 	return m_is_shooting;
 }
 
-bool Doodle::isFallenOutOfScreen()
+bool Doodle::isFallenOutOfScreen() const
 {
 	return m_is_fallen_out;
 }
 
-bool Doodle::isTooHigh()
+bool Doodle::isTooHigh() const
 {
 	return m_is_too_high;
+}
+
+bool Doodle::hasItem() const
+{
+	return m_item;
+}
+
+bool Doodle::hasShoes() const
+{
+	return m_has_shoes;
+}
+
+bool Doodle::canShoot() const
+{
+	return m_can_shoot;
+}
+
+bool Doodle::canJump() const
+{
+	return m_can_jump;
+}
+
+bool Doodle::drawFeet() const
+{
+	return m_draw_feet;
 }
 
 sf::Vector2f Doodle::getVelocity() const
@@ -141,6 +166,7 @@ sf::FloatRect Doodle::getBodyCollisionBox() const
 
 void Doodle::jump()
 {
+	if (!m_can_jump) return;
 	if (m_velocity.y < 0) return;
 	m_is_jumping = true;
 	m_velocity.y = -m_jumping_speed;
@@ -160,6 +186,31 @@ void Doodle::setGravity(sf::Vector2f gravity)
 void Doodle::setJumpingSpeed(float speed)
 {
 	m_jumping_speed = speed;
+}
+
+void Doodle::setItem(sf::Drawable* item)
+{
+	m_item = item;
+}
+
+void Doodle::setHasShoes(bool val)
+{
+	m_has_shoes = val;
+}
+
+void Doodle::setCanShoot(bool val)
+{
+	m_can_shoot = val;
+}
+
+void Doodle::setCanJump(bool val)
+{
+	m_can_jump = val;
+}
+
+void Doodle::setDrawFeet(bool val)
+{
+	m_draw_feet = val;
 }
 
 void Doodle::updateForDrawing() const
@@ -199,11 +250,11 @@ void Doodle::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	updateForDrawing();
 
-	target.draw(m_feet, states);
+	if(m_draw_feet) target.draw(m_feet, states);
 	target.draw(m_body, states);
 	target.draw(m_nose, states);
 
-	sf::FloatRect m_body_bound = m_body.getGlobalBounds();
+	if (hasItem()) target.draw(*m_item, states);
 
 	/*sf::RectangleShape sh_feet{ {m_feet_collision_box.width, m_feet_collision_box.height} };
 	sh_feet.setPosition(m_feet_collision_box.left, m_feet_collision_box.top);

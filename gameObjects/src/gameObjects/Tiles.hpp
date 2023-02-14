@@ -197,6 +197,7 @@ private:
 public:
 	Tiles(sf::RenderWindow& game_window);
 	void update(sf::Time dt);
+	Tile* getTileDoodleWillJump(sf::FloatRect doodle_feet);
 	bool willDoodleJump(sf::FloatRect doodle_feet);
 	size_t getTilesCount();
 

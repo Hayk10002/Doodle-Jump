@@ -570,11 +570,17 @@ void Tiles::update(sf::Time dt)
 				m_tiles.erase(m_tiles.begin() + i--);
 }
 
+Tile* Tiles::getTileDoodleWillJump(sf::FloatRect doodle_feet)
+{
+	Tile* res_tile{ nullptr };
+	sf::FloatRect feet{ doodle_feet.left, doodle_feet.top + doodle_feet.height - 1, doodle_feet.width, 1 };
+	for (const auto& tile : m_tiles) if (tile->getCollisionBox().intersects(feet)) res_tile = (tile->m_on_doodle_jump() ? tile.get() : nullptr);
+	return res_tile;
+}
+
 bool Tiles::willDoodleJump(sf::FloatRect doodle_feet)
 {
-	bool res{0};
-	for (const auto& tile : m_tiles) if (tile->getCollisionBox().intersects(doodle_feet)) res = tile->m_on_doodle_jump();
-	return res;
+	return getTileDoodleWillJump(doodle_feet);
 }
 
 size_t Tiles::getTilesCount()

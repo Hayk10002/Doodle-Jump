@@ -59,7 +59,7 @@ int main()
 
 	//create level
 	Level level;
-	level.addObject(ib);
+	auto ib_obj = level.addObject(ib);
 	level.addObject(tiles);
 	auto items_obj = level.addObject(items);
 	auto doodle_obj = level.addObject(doodle);
@@ -67,6 +67,7 @@ int main()
 	doodle_dupl_obj.setUpdate([&doodle]() {doodle.updateForDrawing(); });
 	level.moveObjectUpInUpdateOrder(items_obj);
 	level.addToUpdateList(doodle_dupl_obj);
+	level.removeFromUpdateList(ib_obj);
 	level.setWindow(&window);
 	level.setScrollingType(InstantScrolling());
 
@@ -82,6 +83,9 @@ int main()
 	//frame clock
 	sf::Clock deltaClock;
 	sf::Time full_time, dt;
+	float game_speed{ 1 };
+
+	float dragging_speed = 100;
 
 	while (window.isOpen())
 	{
@@ -112,13 +116,13 @@ int main()
 
 		//updating
 
-		full_time += (dt = deltaClock.restart());
+		full_time += (dt = deltaClock.restart() * game_speed);
 
 		
 		ImGui::SFML::Update(window, dt);
 		ImGui::Begin("Info");
-		static float dragging_speed = 100;
 		ImGui::DragFloat("Drag speed", &dragging_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
+		ImGui::DragFloat("Game speed", &game_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
 		sf::Vector2f position = doodle.getPosition();
 		ImGui::DragFloat2("Position", (float*)&position, dragging_speed);
 		doodle.setPosition(position);
@@ -160,6 +164,7 @@ int main()
 		level.updateObjects(dt);
 		if (doodle.isTooHigh()) level.scrollUp(doodle.getArea().top - doodle.getPosition().y);
 		level.updateScrolling();
+		ib.update();
 	
 		//drawing
 		window.clear();

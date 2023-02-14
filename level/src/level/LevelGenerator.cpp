@@ -61,26 +61,16 @@ LevelGenerator::Generator LevelGenerator::getGenerator()
 {
 	while (true)
 	{
-		BombTile* tile = new BombTile{ thor::Distributions::uniform(-(float)m_window->getSize().y / 4.f, (float)m_window->getSize().y / 1.5f)() };
+		NormalTile* tile = new NormalTile{};
 		tile->setPosition(thor::Distributions::uniform(m_generating_area.left + tile->getCollisionBoxSize().x / 2, m_generating_area.left + m_generating_area.width - tile->getCollisionBoxSize().x / 2)(), m_generating_area.top + m_generating_area.height - 100);
-		tile->setSpecUpdate([this, tile](sf::Time)
+		m_tiles->m_tiles.push_back(std::unique_ptr<NormalTile>(tile));
+		m_generated_height -= 105;
+		if (!thor::Distributions::uniform(0, 4)())
 		{
-			tile->updateHeight(m_window->mapCoordsToPixel(tile->getPosition()).y - m_window->getSize().y / 2.f);
-		});
-		m_tiles->m_tiles.push_back(std::unique_ptr<BombTile>(tile));
-		if (thor::Distributions::uniform(0, 1)())
-		{
-			Spring* item = new Spring(tile);
+			SpringShoes* item = new SpringShoes(tile, thor::Distributions::uniform(3, 6)(), m_tiles);
 			item->setOffsetFromTile(thor::Distributions::uniform(-tile->getCollisionBoxSize().x / 2 + item->getCollisionBoxSize().x / 2, tile->getCollisionBoxSize().x / 2 - item->getCollisionBoxSize().x / 2)());
-			m_items->m_items.push_back(std::unique_ptr<Spring>(item));
+			m_items->m_items.push_back(std::unique_ptr<SpringShoes>(item));
 		}
-		else
-		{
-			Trampoline* item = new Trampoline(tile);
-			item->setOffsetFromTile(thor::Distributions::uniform(-tile->getCollisionBoxSize().x / 2 + item->getCollisionBoxSize().x / 2, tile->getCollisionBoxSize().x / 2 - item->getCollisionBoxSize().x / 2)());
-			m_items->m_items.push_back(std::unique_ptr<Trampoline>(item));
-		}
-		m_generated_height -= 100;
 		co_await std::suspend_always{};
 	}
 }

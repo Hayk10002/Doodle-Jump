@@ -25,13 +25,19 @@ public:
 	void updateArea(sf::FloatRect area);
 	void updateTiles(Tiles& tiles);
 	void updateItems(Items& items);
-	sf::FloatRect getArea();
 	void setTexture(sf::Texture* texture_ptr);
-	bool isJumping();
-	bool isShooting();
-	bool isFallenOutOfScreen();
-	bool isTooHigh();
 
+	bool isJumping() const;
+	bool isShooting() const;
+	bool isFallenOutOfScreen() const;
+	bool isTooHigh() const;
+	bool hasItem() const;
+	bool hasShoes() const;
+	bool canShoot() const;
+	bool canJump() const;
+	bool drawFeet() const;
+
+	sf::FloatRect getArea() const;
 	sf::Vector2f getVelocity() const;
 	sf::Vector2f getGravity() const;
 	float getJumpingSpeed() const;
@@ -45,6 +51,11 @@ private:
 	void setVelocity(sf::Vector2f velocity);
 	void setGravity(sf::Vector2f gravity);
 	void setJumpingSpeed(float speed);
+	void setItem(sf::Drawable* item);
+	void setHasShoes(bool val);
+	void setCanShoot(bool val);
+	void setCanJump(bool val);
+	void setDrawFeet(bool val);
 
 
 	enum BodyStatus
@@ -85,8 +96,12 @@ private:
 	sf::Vector2f m_feet_offset{0, 195}, m_feet_jumping_offset{0, -25};
 	sf::Vector2f m_feet_collision_box_size{ 270, 60 };
 	sf::FloatRect m_feet_collision_box{};
+	bool m_draw_feet{ true };
 	sf::FloatRect m_area{};
-	bool m_is_fallen_out{ 0 }, m_is_too_high{ 0 };
+	bool m_is_fallen_out{ false }, m_is_too_high{ false };
+	bool m_can_shoot{ true }, m_can_jump{ true };
+	sf::Drawable* m_item{ nullptr };
+	bool m_has_shoes{ false };
 	mutable bool m_is_updating_for_drawing_needed{ false };
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
