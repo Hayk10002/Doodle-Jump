@@ -10,6 +10,10 @@ class Tiles;
 class Tile : public sf::Sprite
 {
 public:
+
+	using SpecUpdateFunctionType = std::function<void(sf::Time)>;
+	using OnDoodleJumpFunctionType = std::function<bool()>;
+
 	Tile();
 	Tile(sf::Texture* texture_ptr);
 	Tile(const Tile&) = default;
@@ -24,8 +28,8 @@ public:
 	bool isFallenOffScreen() const;
 	void setReadyToBeDeleted(bool is_ready);
 	virtual void update(sf::Time) = 0;
-	void setSpecUpdate(std::function<void(sf::Time)> spec_update);
-	void setDoodleJumpCallback(std::function<bool()> on_doodle_jump);
+	void setSpecUpdate(SpecUpdateFunctionType spec_update);
+	void setDoodleJumpCallback(OnDoodleJumpFunctionType on_doodle_jump);
 
 	virtual ~Tile() = default;
 
@@ -35,8 +39,8 @@ protected:
 	sf::FloatRect m_collision_box{};
 	sf::Vector2f m_collision_box_size{};
 	float m_texture_scale{ 0.65 };
-	std::function<void(sf::Time)> m_spec_update{ [](sf::Time) {} };
-	std::function<bool()> m_on_doodle_jump{ []() {return true; } };
+	SpecUpdateFunctionType m_spec_update{ [](sf::Time) {} };
+	OnDoodleJumpFunctionType m_on_doodle_jump{ []() {return true; } };
 
 private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;

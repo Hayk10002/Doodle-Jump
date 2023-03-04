@@ -4,6 +4,7 @@
 
 #include <gameObjects/Doodle.hpp>
 #include <gameObjects/Tiles.hpp>
+#include <gameObjects/Monsters.hpp>
 #include <common/Resources.hpp>
 #include <common/Utils.hpp>
 
@@ -138,6 +139,18 @@ void Item::DoodleManipulator::setCanJump(bool val)
 	m_doodle->setCanJump(val);
 }
 
+bool Item::DoodleManipulator::isDead() const
+{
+	if (!m_doodle) return false;
+	return m_doodle->isDead();
+}
+
+void Item::DoodleManipulator::setShield(Shield* shield)
+{
+	if (!m_doodle) return;
+	m_doodle->setShield(shield);
+}
+
 Item::Item() : Item(nullptr)
 {}
 
@@ -168,7 +181,7 @@ bool Item::isReadyToBeDeleted() const
 	return m_is_ready_to_be_deleted;
 }
 
-void Item::setDoodleCollisionCallback(std::function<void(Doodle*)> on_doodle_collision)
+void Item::setDoodleCollisionCallback(OnDoodleCollisionFunctionType on_doodle_collision)
 {
 	m_on_doodle_collision = on_doodle_collision;
 }
@@ -534,8 +547,8 @@ Jetpack::~Jetpack()
 
 float SpringShoes::getCurrentCompressionWithoutClamp()
 {
-	if (!m_current_tile) return 1;
-	return (m_current_tile->getCollisionBox().top - getPosition().y) / (m_collision_box_size.y - m_shoes.getSize().y * m_texture_scale);
+	if (!std::visit([](auto* current_platform) -> bool {return current_platform; }, m_current_platform)) return 1;
+	return std::visit([this](auto* current_platform) { return (current_platform->getCollisionBox().top - getPosition().y) / (m_collision_box_size.y - m_shoes.getSize().y * m_texture_scale); }, m_current_platform);
 }
 
 float SpringShoes::getCurrentCompression()
@@ -549,14 +562,14 @@ void SpringShoes::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	target.draw(sf::Sprite(*this), states);
 }
 
-SpringShoes::SpringShoes(Tile* tile, size_t max_use_count, Tiles* tiles):
+SpringShoes::SpringShoes(Tile* tile, size_t max_use_count, Tiles* tiles, Monsters* monsters):
 	Item(&global_textures["items"]),
 	m_shoes(global_textures["items"]),
 	m_max_use_count(max_use_count),
-	m_tiles(tiles)
+	m_tiles(tiles),
+	m_monsters(monsters)
 {
 	m_tile = tile;
-	m_tiles = tiles;
 	m_tile_offset.y = -24;
 	m_collision_box_size = sf::Vector2f{ 52, 38 } *m_texture_scale;
 	setTextureRect({ 0, 252, 52, 24 });
@@ -566,6 +579,8 @@ SpringShoes::SpringShoes(Tile* tile, size_t max_use_count, Tiles* tiles):
 		if (m_use_count) return;
 		if (!doodle) return;
 		if (doodle->hasShoes()) return;
+		if (doodle->getVelocity().y < 0) return;
+		if (!doodle->getFeetCollisionBox().intersects(getCollisionBox())) return;
 		m_doodle_manip.setDoodle(doodle);
 		m_doodle_manip.setHasShoes(true);
 		m_doodle_manip.setDrawFeet(false);
@@ -599,14 +614,14 @@ void SpringShoes::update(sf::Time dt)
 	}
 	else if (m_doodle_manip.hasDoodle())
 	{
-		if (m_use_count >= m_max_use_count)
+		if (m_use_count >= m_max_use_count || m_doodle_manip.isDead())
 		{
 			m_velocity = m_doodle_manip.getVelocity().y - 100;
 			m_doodle_manip.setCanJump(true);
 			m_doodle_manip.setDrawFeet(true);
 			m_doodle_manip.setHasShoes(false);
 			m_doodle_manip.setDoodle(nullptr);
-			m_current_tile = nullptr;
+			m_current_platform = (Tile*)nullptr;
 			m_gravity += 400;
 			m_after_use_horizontal_speed = 100;
 			m_after_use_rotation_speed = 90;
@@ -617,10 +632,10 @@ void SpringShoes::update(sf::Time dt)
 			m_shoes.set((m_doodle_manip.getBodyStatus() == 2) ? 2 : 1);
 			setScale(std::abs(getScale().x) * (m_doodle_manip.getBodyStatus() ? 1 : -1), getScale().y);
 			setRotation(m_doodle_manip.getRotation());
-			if(m_current_tile)
+			if (std::visit([](auto* current_platform) -> bool {return current_platform;}, m_current_platform))
 			{
 				float compr = getCurrentCompressionWithoutClamp();
-				if (compr <= 0 && !m_jumping)
+				if ((compr <= 0 || std::holds_alternative<Monster*>(m_current_platform)) && m_doodle_manip.getVelocity().y > 0 && !m_jumping)
 				{
 					m_doodle_manip.setCanJump(true);
 					m_doodle_manip.jumpWithSpeed(m_jumping_speed);
@@ -629,9 +644,10 @@ void SpringShoes::update(sf::Time dt)
 					m_jumping = true;
 				}
 				else if (compr > 0 && m_jumping) m_jumping = false;
-				if (compr > 1) m_current_tile = nullptr;
+				if (compr > 1) m_current_platform = (Tile*)nullptr;
 			}
-			else if (Tile* jump_tile = m_tiles->getTileDoodleWillJump(getCollisionBox()); jump_tile && m_doodle_manip.getVelocity().y > 0) m_current_tile = jump_tile;
+			else if (Tile* jump_tile; m_doodle_manip.getVelocity().y > 0 && (jump_tile = m_tiles->getTileDoodleWillJump(getCollisionBox()))) m_current_platform = jump_tile;
+			else if (Monster* jump_monster; m_doodle_manip.getVelocity().y > 0 && (jump_monster = m_monsters->getMonsterDoodleWillJump(getCollisionBox()))) m_current_platform = jump_monster;
 		}
 	}
 	else
@@ -656,6 +672,90 @@ SpringShoes::~SpringShoes()
 		m_doodle_manip.setDrawFeet(true);
 		m_doodle_manip.setHasShoes(false);
 	}
+}
+
+Shield::Shield(Tile* tile):
+	Item(&global_textures["items"])
+{
+	m_tile = tile;
+	m_tile_offset.y = -40;
+	m_collision_box_size = sf::Vector2f{ 66, 66 } *m_texture_scale;
+	setDoodleCollisionCallback([this](Doodle* doodle)
+		{
+			if (!doodle) return;
+			if (doodle->hasShield()) return;
+			m_animator.play() << thor::Playback::loop("use");
+			m_doodle_manip.setDoodle(doodle);
+			m_doodle_manip.setShield(this);
+			if (m_tile)
+			{
+				m_tile->setReadyToBeDeleted(true);
+				m_tile = nullptr;
+			}
+			m_use_start = m_existing_time;
+		});
+	tile->setReadyToBeDeleted(false);
+	setScale(m_texture_scale, m_texture_scale);
+	thor::FrameAnimation default_animation;
+	default_animation.addFrame(1, { 100, 230, 66, 66 }, { 33, 33 });
+	m_animations->addAnimation("default", default_animation, sf::seconds(1));
+	thor::FrameAnimation use_animation;
+	use_animation.addFrame(1, { 170, 0, 192, 192 }, { 96, 96 });
+	use_animation.addFrame(1, { 170, 192, 192, 192 }, { 96, 96 });
+	use_animation.addFrame(1, { 170, 384, 192, 192 }, { 96, 96 });
+	m_animations->addAnimation("use", use_animation, sf::seconds(0.2));
+	m_animator.play() << thor::Playback::loop("default");
+}
+
+void Shield::update(sf::Time dt)
+{
+	m_existing_time += dt;
+	if (m_tile)
+	{
+		setPosition(m_tile->getPosition() + m_tile_offset);
+		if (m_tile->isFallenOffScreen() || m_tile->isDestroyed())
+		{
+			m_tile->setReadyToBeDeleted(true);
+			m_tile = nullptr;
+		}
+	}
+	else if (m_doodle_manip.hasDoodle())
+	{
+		if (m_existing_time - m_use_start >= m_use_duration)
+		{
+			m_doodle_manip.setShield(nullptr);
+			m_doodle_manip.setDoodle(nullptr);
+			m_is_destroyed = true;
+		}
+		else
+		{
+			if (m_existing_time - m_use_start >= m_end_start)
+			{
+				sf::Color col = getColor();
+				col.a = thor::Distributions::uniform(0, 1)() * 255;
+				setColor(col);
+			}
+			setPosition(m_doodle_manip.getPosition());
+		}
+	}
+	else updatePhysics(dt);
+
+
+	m_collision_box = sf::FloatRect(getPosition() - m_collision_box_size / 2.f, m_collision_box_size);
+	m_animator.update(dt);
+	m_animator.animate(*this);	
+}
+
+bool Shield::isDestroyed() const
+{
+	if (!m_doodle_manip.hasDoodle()) return false;
+	return m_is_destroyed;
+}
+
+Shield::~Shield()
+{
+	m_doodle_manip.setShield(nullptr);
+	m_doodle_manip.setDoodle(nullptr);
 }
 
 Items::Items(sf::RenderWindow& game_window):
@@ -697,4 +797,3 @@ void Items::draw(sf::RenderTarget& target, sf::RenderStates states) const
 		target.draw(sh, states);*/
 	}
 }
-

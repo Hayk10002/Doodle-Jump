@@ -45,12 +45,12 @@ void Tile::setReadyToBeDeleted(bool is_ready)
 	m_is_ready_to_be_deleted = is_ready;
 }
 
-void Tile::setSpecUpdate(std::function<void(sf::Time)> spec_update)
+void Tile::setSpecUpdate(SpecUpdateFunctionType spec_update)
 {
 	m_spec_update = spec_update;
 }
 
-void Tile::setDoodleJumpCallback(std::function<bool()> on_doodle_jump)
+void Tile::setDoodleJumpCallback(OnDoodleJumpFunctionType on_doodle_jump)
 {
 	m_on_doodle_jump = on_doodle_jump;
 }

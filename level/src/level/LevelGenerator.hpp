@@ -5,6 +5,7 @@
 #include <SFML/Graphics.hpp>
 #include <gameObjects/Tiles.hpp>
 #include <gameObjects/Items.hpp>
+#include <gameObjects/Monsters.hpp>
 
 class LevelGenerator
 {
@@ -40,12 +41,13 @@ class LevelGenerator
 	};
 
 public:
-	LevelGenerator(sf::RenderWindow* window, Tiles* tiles, Items* items);
+	LevelGenerator(sf::RenderWindow* window, Tiles* tiles, Items* items, Monsters* monsters);
 	void update();
 
 private:
 	Tiles* m_tiles;
 	Items* m_items;
+	Monsters* m_monsters;
 	sf::RenderWindow* m_window;
 	Generator m_generator;
 	float m_generated_height{};
@@ -53,4 +55,5 @@ private:
 	
 	sf::FloatRect getGeneratingArea();
 	Generator getGenerator();
+	Tile* generateNormalTile(float& generated_height, float left, float right);
 };

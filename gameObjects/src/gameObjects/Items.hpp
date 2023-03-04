@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <string>
+#include <variant>
 
 #include <SFML/Graphics.hpp>
 #include <Thor/Animations.hpp>
@@ -10,6 +11,7 @@
 class Doodle;
 class Items;
 class Tile;
+class Shield;
 class Item : public sf::Sprite
 {
 	struct DoodleManipulator
@@ -38,9 +40,14 @@ class Item : public sf::Sprite
 		void setDrawFeet(bool val);
 		bool canJump() const;
 		void setCanJump(bool val);
+		bool isDead() const;
+		void setShield(Shield* shield);
 		//...
 	};
+
 public:
+
+	using OnDoodleCollisionFunctionType = std::function<void(Doodle*)>;
 	Item();
 	Item(sf::Texture* texture_ptr);
 	Item(const Item&) = default;
@@ -53,7 +60,7 @@ public:
 	virtual bool isDestroyed() const;
 	bool isReadyToBeDeleted() const;
 	virtual void update(sf::Time) = 0;
-	void setDoodleCollisionCallback(std::function<void(Doodle*)> on_doodle_collision);
+	void setDoodleCollisionCallback(OnDoodleCollisionFunctionType on_doodle_collision);
 	void setOffsetFromTile(float offset);
 
 	virtual ~Item() = default;
@@ -66,7 +73,7 @@ protected:
 	float m_texture_scale{ 0.65 };
 	sf::Vector2f m_collision_box_size;
 	bool m_is_ready_to_be_deleted{ true };
-	std::function<void(Doodle*)> m_on_doodle_collision{ [](Doodle*) {} };
+	OnDoodleCollisionFunctionType m_on_doodle_collision{ [](Doodle*) {} };
 	float m_velocity{}, m_gravity{ 1200 };
 	Tile* m_tile{};
 	sf::Vector2f m_tile_offset{0, 0};
@@ -145,13 +152,16 @@ public:
 };
 
 class Tiles;
+class Monster;
+class Monsters;
 class SpringShoes : public Item
 {
 	sw::GallerySprite m_shoes;
 	sf::Vector2f m_doodle_offset{ 0, 34 };
-	Tile* m_current_tile{ nullptr };
+	std::variant<Tile*, Monster*> m_current_platform{};
 	size_t m_max_use_count, m_use_count{ 0 };
 	Tiles* m_tiles;
+	Monsters* m_monsters;
 	float m_jumping_speed{ 1200 };
 	bool m_jumping{ false };
 	float m_after_use_rotation_speed{ 90 };
@@ -162,13 +172,25 @@ class SpringShoes : public Item
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
 public:
-	SpringShoes(Tile* tile, size_t max_use_count, Tiles* tiles);
+	SpringShoes(Tile* tile, size_t max_use_count, Tiles* tiles, Monsters* monsters);
 	SpringShoes(const SpringShoes&) = default;
 	SpringShoes(SpringShoes&&) = default;
 	SpringShoes& operator=(const SpringShoes&) = default;
 	SpringShoes& operator=(SpringShoes&&) = default;
 	void update(sf::Time dt) override;
 	~SpringShoes();
+};
+
+class Shield : public Item
+{
+	sf::Time m_existing_time{}, m_use_start{}, m_end_start{sf::seconds(8)}, m_use_duration{sf::seconds(10)};
+	bool m_is_destroyed{ false };
+
+public:
+	Shield(Tile* tile);
+	void update(sf::Time dt) override;
+	bool isDestroyed() const override;
+	~Shield();
 };
 
 

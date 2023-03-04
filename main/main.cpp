@@ -19,7 +19,8 @@
 #include <level/LevelGenerator.hpp>
 #include <gameObjects/Doodle.hpp>
 #include <gameObjects/Tiles.hpp>
-
+#include <gameObjects/Items.hpp>
+#include <gameObjects/Monsters.hpp>
 
 enum class UserActions
 {
@@ -29,6 +30,8 @@ enum class UserActions
 	Left, 
 	Right,
 	Shoot,
+	Die,
+	Ressurect,
 	BreakPoint
 };
 
@@ -54,20 +57,21 @@ int main()
 	Doodle doodle({ 400, 400 });
 	Tiles tiles(window);
 	Items items(window);
+	Monsters monsters(window);
 
-	LevelGenerator level_generator(&window, &tiles, &items);
+	LevelGenerator level_generator(&window, &tiles, &items, &monsters);
 
 	//create level
 	Level level;
-	auto ib_obj = level.addObject(ib);
+	level.addObject(ib, []() {});
 	level.addObject(tiles);
 	auto items_obj = level.addObject(items);
 	auto doodle_obj = level.addObject(doodle);
 	auto doodle_dupl_obj = doodle_obj.get_duplicate();
 	doodle_dupl_obj.setUpdate([&doodle]() {doodle.updateForDrawing(); });
 	level.moveObjectUpInUpdateOrder(items_obj);
+	level.addObject(monsters);
 	level.addToUpdateList(doodle_dupl_obj);
-	level.removeFromUpdateList(ib_obj);
 	level.setWindow(&window);
 	level.setScrollingType(InstantScrolling());
 
@@ -78,9 +82,12 @@ int main()
 	action_map[UserActions::Left] = thor::Action(sf::Keyboard::A, thor::Action::Hold);
 	action_map[UserActions::Right] = thor::Action(sf::Keyboard::D, thor::Action::Hold);
 	action_map[UserActions::Shoot] = thor::Action(sf::Mouse::Left, thor::Action::PressOnce);
+	action_map[UserActions::Die] = thor::Action(sf::Keyboard::BackSpace, thor::Action::PressOnce);
+	action_map[UserActions::Ressurect] = thor::Action(sf::Keyboard::Enter, thor::Action::PressOnce);
 	action_map[UserActions::BreakPoint] = thor::Action(sf::Keyboard::LShift) && thor::Action(sf::Keyboard::Escape);
 
 	//frame clock
+	size_t frame_count = 0;
 	sf::Clock deltaClock;
 	sf::Time full_time, dt;
 	float game_speed{ 1 };
@@ -116,17 +123,21 @@ int main()
 
 		//updating
 
+		frame_count++;
 		full_time += (dt = deltaClock.restart() * game_speed);
 
 		
 		ImGui::SFML::Update(window, dt);
 		ImGui::Begin("Info");
+		ImGui::Text("Frame count: %d", frame_count);
+		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
 		ImGui::DragFloat("Drag speed", &dragging_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
 		ImGui::DragFloat("Game speed", &game_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
 		sf::Vector2f position = doodle.getPosition();
 		ImGui::DragFloat2("Position", (float*)&position, dragging_speed);
 		doodle.setPosition(position);
 		ImGui::Text("Area: {%f, %f, %f, %f}", doodle.getArea().left, doodle.getArea().top, doodle.getArea().width, doodle.getArea().height);
+		ImGui::Text("Is doodle dead: %d", doodle.isDead());
 		//if (ImGui::IsWindowFocused())  dt = sf::Time::Zero;
 		ImGui::End();
 
@@ -151,6 +162,8 @@ int main()
 			if (angle > 90) angle -= 360;
 			doodle.shoot(angle + 90);
 		}
+		if (action_map.isActive(UserActions::Die)) doodle.dieShrink(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
+		if (action_map.isActive(UserActions::Ressurect)) doodle.ressurrect({ window.mapPixelToCoords(sf::Mouse::getPosition(window)).x, window.mapPixelToCoords(sf::Vector2i{ window.getSize() } / 2).y });
 		if (action_map.isActive(UserActions::BreakPoint))
 		{
 			int debug = 0;
@@ -158,9 +171,11 @@ int main()
 
 		level_generator.update();
 		doodle.updateArea(utils::getViewArea(window));
-		doodle.updateTiles(tiles);
-		doodle.updateItems(items);
-		if (doodle.isFallenOutOfScreen()) doodle.setPosition(doodle.getPosition().x, window.mapPixelToCoords(sf::Vector2i{ window.getSize() } / 2).y);
+		if(!doodle.isDead()){
+			doodle.updateTiles(tiles);
+			doodle.updateItems(items);
+			doodle.updateMonsters(monsters);
+		}
 		level.updateObjects(dt);
 		if (doodle.isTooHigh()) level.scrollUp(doodle.getArea().top - doodle.getPosition().y);
 		level.updateScrolling();

@@ -9,6 +9,8 @@ add_library(${GameObjectsTargetName} STATIC
             src/gameObjects/Tiles.cpp
             src/gameObjects/Items.hpp
             src/gameObjects/Items.cpp
+            src/gameObjects/Monsters.hpp
+            src/gameObjects/Monsters.cpp
 )
 
 target_link_libraries(${GameObjectsTargetName}
