@@ -15,7 +15,7 @@
 #include <common/DebugImGui.hpp>
 #include <common/Utils.hpp>
 #include <drawables/ImageBackground.hpp>
-#include <level/Level.hpp>
+#include <drawables/Scene.hpp>
 #include <level/LevelGenerator.hpp>
 #include <gameObjects/Doodle.hpp>
 #include <gameObjects/Tiles.hpp>
@@ -40,7 +40,8 @@ enum class UserActions
 int main()
 {
 	//setup the window
-	sf::RenderWindow window(sf::VideoMode(528, 800), "Doodle Jump");
+	constexpr size_t WINDOW_WIDTH = 500;
+	sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, 800), "Doodle Jump");
 	sf::Vector2u window_prev_size(window.getSize());
 	window.setKeyRepeatEnabled(false);
 
@@ -61,26 +62,33 @@ int main()
 
 	LevelGenerator level_generator(&window, &tiles, &items, &monsters);
 
-	//create level
-	Level level;
-	level.addObject(ib, []() {});
-	level.addObject(tiles);
-	auto items_obj = level.addObject(items);
-	auto doodle_obj = level.addObject(doodle);
+	//create level scene
+	Scene scene;
+	scene.addObject(ib, []() {});
+	scene.addObject(tiles);
+	auto items_obj = scene.addObject(items);
+	auto doodle_obj = scene.addObject(doodle);
 	auto doodle_dupl_obj = doodle_obj.get_duplicate();
 	doodle_dupl_obj.setUpdate([&doodle]() {doodle.updateForDrawing(); });
-	level.moveObjectUpInUpdateOrder(items_obj);
-	level.addObject(monsters);
-	level.addToUpdateList(doodle_dupl_obj);
-	level.setWindow(&window);
-	level.setScrollingType(InstantScrolling());
+	scene.moveObjectUpInUpdateOrder(items_obj);
+	scene.addObject(monsters);
+	scene.addToUpdateList(doodle_dupl_obj);
+	scene.setWindow(&window);
+	scene.setScrollingType(InstantScrolling());
+
+	sf::Font default_font;
+	default_font.loadFromFile(RESOURCES_PATH"mistal.ttf");
+	sf::Text points_text("", default_font);
+	points_text.setFillColor(sf::Color::Black);
+	points_text.setOutlineColor(sf::Color::White);
+	points_text.setOutlineThickness(2);
 
 	//setup the user actions
 	thor::ActionMap<UserActions> action_map;
 	action_map[UserActions::Close] = thor::Action(sf::Event::Closed);
 	action_map[UserActions::Resize] = thor::Action(sf::Event::Resized);
-	action_map[UserActions::Left] = thor::Action(sf::Keyboard::A, thor::Action::Hold);
-	action_map[UserActions::Right] = thor::Action(sf::Keyboard::D, thor::Action::Hold);
+	action_map[UserActions::Left] = thor::Action(sf::Keyboard::A) || thor::Action(sf::Keyboard::Left);
+	action_map[UserActions::Right] = thor::Action(sf::Keyboard::D) || thor::Action(sf::Keyboard::Right);
 	action_map[UserActions::Shoot] = thor::Action(sf::Mouse::Left, thor::Action::PressOnce);
 	action_map[UserActions::Die] = thor::Action(sf::Keyboard::BackSpace, thor::Action::PressOnce);
 	action_map[UserActions::Ressurect] = thor::Action(sf::Keyboard::Enter, thor::Action::PressOnce);
@@ -145,9 +153,10 @@ int main()
 			window.close();
 		if (action_map.isActive(UserActions::Resize))
 		{
+			window.setSize({ WINDOW_WIDTH, window.getSize().y });
 			sf::Vector2f scale = { (float)window_prev_size.x / window.getSize().x, (float)window_prev_size.y / window.getSize().y };
 			window_prev_size = { window.getSize().x, window.getSize().y };
-			level.zoom(scale, true);
+			scene.zoom(scale, true);
 		}
 		if (action_map.isActive(UserActions::Left))
 			doodle.left(dt);
@@ -176,14 +185,18 @@ int main()
 			doodle.updateItems(items);
 			doodle.updateMonsters(monsters);
 		}
-		level.updateObjects(dt);
-		if (doodle.isTooHigh()) level.scrollUp(doodle.getArea().top - doodle.getPosition().y);
-		level.updateScrolling();
+		scene.updateObjects(dt);
+		if (doodle.isTooHigh()) scene.scrollUp(doodle.getArea().top - doodle.getPosition().y);
+		scene.updateScrolling();
 		ib.update();
+
+		points_text.setPosition(window.mapPixelToCoords({ 10, 10 }));
+		points_text.setString(std::to_string(int(-window.mapPixelToCoords({ 0, 0 }).y)));
 	
 		//drawing
 		window.clear();
-		window.draw(level);
+		window.draw(scene);
+		window.draw(points_text);
 		ImGui::SFML::Render(window);
 		window.display();
 	}

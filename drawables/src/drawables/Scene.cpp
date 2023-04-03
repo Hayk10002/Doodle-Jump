@@ -1,4 +1,4 @@
-#include "Level.hpp"
+#include "Scene.hpp"
 #include <type_traits>
 #include <numbers>
 #include <cmath>
@@ -166,67 +166,67 @@ ViewScrolling::ViewScrolling(sf::Time duration):
 	m_duration(duration)
 {}
 
-Level::Object::Object(std::shared_ptr<const size_t*> level) :
-	level(level),
+Scene::Object::Object(std::shared_ptr<const size_t*> scene) :
+	scene(scene),
 	identifier(identifier_counter++)
 {}
 
-Level::Object::Object(const Object& other):
-	level(other.level),
+Scene::Object::Object(const Object& other):
+	scene(other.scene),
 	drawable_ptr(other.drawable_ptr),
 	update(other.update),
 	identifier(other.identifier)
 {}
 
-Level::Object Level::Object::get_duplicate() const
+Scene::Object Scene::Object::get_duplicate() const
 {
 	Object obj(*this);
 	obj.identifier = Object::identifier_counter++;
 	return obj;
 }
 
-bool Level::Object::operator==(Object other) const
+bool Scene::Object::operator==(Object other) const
 {
-	return std::tie(level, drawable_ptr, identifier) == std::tie(other.level, other.drawable_ptr, other.identifier);
+	return std::tie(scene, drawable_ptr, identifier) == std::tie(other.scene, other.drawable_ptr, other.identifier);
 }
 
-Level::Level()	
+Scene::Scene()	
 {
 	setScrollingType(InstantScrolling());
 }
 
-Level::~Level()
+Scene::~Scene()
 {
-	for (auto& obj : m_objects) (*obj.level) = nullptr;
+	for (auto& obj : m_objects) (*obj.scene) = nullptr;
 }
 
-void Level::setWindow(sf::RenderWindow * window)
+void Scene::setWindow(sf::RenderWindow * window)
 {
 	m_window_ptr = window;
 	m_view = m_view_destination = window->getDefaultView();
 }
 
-sf::RenderWindow* Level::getWindow() const
+sf::RenderWindow* Scene::getWindow() const
 {
 	return m_window_ptr;
 }
 
-size_t Level::Object::Hasher::operator()(const Object& obj) const
+size_t Scene::Object::Hasher::operator()(const Object& obj) const
 {
 	return std::_Hash_array_representation<char>((char*)&obj, sizeof(Object));
 }
 
-bool Level::removeObject(Object obj)
+bool Scene::removeObject(Object obj)
 {
 	if (!isMyObject(obj)) return false;
 	if(!removeFromUpdateList(obj)) return false;
 	if(!removeFromDrawList(obj)) return false;;
-	(*obj.level) = nullptr;
+	(*obj.scene) = nullptr;
 	m_objects.erase(obj);
 	return true;
 }
 
-bool Level::moveObjectUpInUpdateOrder(Object obj, int count)
+bool Scene::moveObjectUpInUpdateOrder(Object obj, int count)
 {
 	if (!isMyObject(obj)) return false;
 	size_t pos = getObjectsItrForUpdateList(obj) - m_update_order.begin();
@@ -239,22 +239,22 @@ bool Level::moveObjectUpInUpdateOrder(Object obj, int count)
 	return true;
 }
 
-bool Level::moveObjectDownInUpdateOrder(Object obj, int count)
+bool Scene::moveObjectDownInUpdateOrder(Object obj, int count)
 {
 	return moveObjectUpInUpdateOrder(obj, -count);
 }
 
-bool Level::updateFirst(Object obj)
+bool Scene::updateFirst(Object obj)
 {
 	return moveObjectDownInUpdateOrder(obj, m_update_order.size());
 }
 
-bool Level::updateLast(Object obj)
+bool Scene::updateLast(Object obj)
 {
 	return moveObjectUpInUpdateOrder(obj, m_update_order.size());
 }
 
-bool Level::addToUpdateList(Object obj, int position)
+bool Scene::addToUpdateList(Object obj, int position)
 {
 	if (!isMyObject(obj)) return false;
 	if(isInUpdateList(obj)) return false;
@@ -264,12 +264,12 @@ bool Level::addToUpdateList(Object obj, int position)
 	return true;
 }
 
-bool Level::isInUpdateList(Object obj)
+bool Scene::isInUpdateList(Object obj)
 {
 	return getObjectsItrForUpdateList(obj) != m_update_order.end();
 }
 
-bool Level::removeFromUpdateList(Object obj)
+bool Scene::removeFromUpdateList(Object obj)
 {
 	if (!isMyObject(obj)) return false;
 	auto itr = getObjectsItrForUpdateList(obj);
@@ -278,7 +278,7 @@ bool Level::removeFromUpdateList(Object obj)
 	return true;
 }
 
-bool Level::moveObjectUpInDrawOrder(Object obj, int count)
+bool Scene::moveObjectUpInDrawOrder(Object obj, int count)
 {
 	if (!isMyObject(obj)) return false;
 	size_t pos = getObjectsItrForDrawList(obj) - m_draw_order.begin();
@@ -291,22 +291,22 @@ bool Level::moveObjectUpInDrawOrder(Object obj, int count)
 	return true;
 }
 
-bool Level::moveObjectDownInDrawOrder(Object obj, int count)
+bool Scene::moveObjectDownInDrawOrder(Object obj, int count)
 {
 	return moveObjectUpInDrawOrder(obj, -count);
 }
 
-bool Level::drawFirst(Object obj)
+bool Scene::drawFirst(Object obj)
 {
 	return moveObjectDownInDrawOrder(obj, m_draw_order.size());
 }
 
-bool Level::drawLast(Object obj)
+bool Scene::drawLast(Object obj)
 {
 	return moveObjectUpInDrawOrder(obj, m_draw_order.size());
 }
 
-bool Level::addToDrawList(Object obj, int position)
+bool Scene::addToDrawList(Object obj, int position)
 {
 	if (!isMyObject(obj)) return false;
 	if (isInDrawList(obj))return false;
@@ -316,12 +316,12 @@ bool Level::addToDrawList(Object obj, int position)
 	return true;
 }
 
-bool Level::isInDrawList(Object obj)
+bool Scene::isInDrawList(Object obj)
 {
 	return getObjectsItrForDrawList(obj) != m_draw_order.end();
 }
 
-bool Level::removeFromDrawList(Object obj)
+bool Scene::removeFromDrawList(Object obj)
 {
 	if (!isMyObject(obj)) return false;
 	auto itr = getObjectsItrForDrawList(obj);
@@ -330,32 +330,32 @@ bool Level::removeFromDrawList(Object obj)
 	return true;
 }
 
-void Level::scrollUp(float offset, bool instant)
+void Scene::scrollUp(float offset, bool instant)
 {
 	scroll({ 0, -offset }, instant);
 }
 
-void Level::scrollDown(float offset, bool instant)
+void Scene::scrollDown(float offset, bool instant)
 {
 	scroll({ 0, offset }, instant);
 }
 
-void Level::scrollLeft(float offset, bool instant)
+void Scene::scrollLeft(float offset, bool instant)
 {
 	scroll({ -offset, 0 }, instant);
 }
 
-void Level::scrollRight(float offset, bool instant)
+void Scene::scrollRight(float offset, bool instant)
 {
 	scroll({ offset, 0 }, instant);
 }
 
-void Level::scroll(float offset_x, float offset_y, bool instant)
+void Scene::scroll(float offset_x, float offset_y, bool instant)
 {
 	scroll({ offset_x, offset_y }, instant);
 }
 
-void Level::scroll(sf::Vector2f offset, bool instant)
+void Scene::scroll(sf::Vector2f offset, bool instant)
 {
 	m_in_scroll = true;
 	if (!instant) m_view = getCurrentView();
@@ -364,27 +364,27 @@ void Level::scroll(sf::Vector2f offset, bool instant)
 	if (instant) m_view = m_view_destination;
 }
 
-void Level::zoomX(float scale, bool instant)
+void Scene::zoomX(float scale, bool instant)
 {
 	zoom({ scale, 0 }, instant);
 }
 
-void Level::zoomY(float scale, bool instant)
+void Scene::zoomY(float scale, bool instant)
 {
 	zoom({ 0, scale }, instant);
 }
 
-void Level::zoom(float scale, bool instant)
+void Scene::zoom(float scale, bool instant)
 {
 	zoom({ scale, scale }, instant);
 }
 
-void Level::zoom(float scale_x, float scale_y, bool instant)
+void Scene::zoom(float scale_x, float scale_y, bool instant)
 {
 	zoom({ scale_x, scale_y }, instant);
 }
 
-void Level::zoom(sf::Vector2f scale, bool instant)
+void Scene::zoom(sf::Vector2f scale, bool instant)
 {
 	m_in_scroll = true;
 	if(!instant) m_view = getCurrentView();
@@ -396,7 +396,7 @@ void Level::zoom(sf::Vector2f scale, bool instant)
 	if (instant) m_view = m_view_destination;
 }
 
-void Level::rotate(float angle, bool instant)
+void Scene::rotate(float angle, bool instant)
 {
 	
 	m_in_scroll = true;
@@ -406,12 +406,12 @@ void Level::rotate(float angle, bool instant)
 	if (instant) m_view = m_view_destination;
 }
 
-std::string Level::getScrollingTypeName() const
+std::string Scene::getScrollingTypeName() const
 {
 	return m_scrolling_type_ptr->getName();
 }
 
-void Level::updateObjects(sf::Time dt)
+void Scene::updateObjects(sf::Time dt)
 {
 	for (int i = 0; i < m_update_order.size(); i++)
 	{
@@ -420,7 +420,7 @@ void Level::updateObjects(sf::Time dt)
 	}
 }
 
-void Level::updateScrolling()
+void Scene::updateScrolling()
 {
 	if (m_in_scroll)
 	{
@@ -432,42 +432,42 @@ void Level::updateScrolling()
 	else m_view = m_view_destination;
 }
 
-SimpleView Level::getCurrentView() const
+SimpleView Scene::getCurrentView() const
 {
 	return m_scrolling_type_ptr->getView(m_scroll_timer.getElapsedTime(), m_view, m_view_destination);
 
 }
 
-std::deque<Level::Object>::iterator Level::getObjectsItrForUpdateList(Object obj)
+std::deque<Scene::Object>::iterator Scene::getObjectsItrForUpdateList(Object obj)
 {
 	if (!isMyObject(obj)) return m_update_order.end();
 	return std::find(m_update_order.begin(), m_update_order.end(), obj);
 }
 
-std::deque<Level::Object>::iterator Level::getObjectsItrForDrawList(Object obj)
+std::deque<Scene::Object>::iterator Scene::getObjectsItrForDrawList(Object obj)
 {
 	if (!isMyObject(obj)) return m_draw_order.end();
 	return std::find(m_draw_order.begin(), m_draw_order.end(), obj);
 }
 
-std::deque<Level::Object>::const_iterator Level::getObjectsItrForUpdateList(Object obj) const
+std::deque<Scene::Object>::const_iterator Scene::getObjectsItrForUpdateList(Object obj) const
 {
 	if (!isMyObject(obj)) return m_update_order.end();
 	return std::find(m_update_order.begin(), m_update_order.end(), obj);
 }
 
-std::deque<Level::Object>::const_iterator Level::getObjectsItrForDrawList(Object obj) const
+std::deque<Scene::Object>::const_iterator Scene::getObjectsItrForDrawList(Object obj) const
 {
 	if (!isMyObject(obj)) return m_draw_order.end();
 	return std::find(m_draw_order.begin(), m_draw_order.end(), obj);
 }
 
-bool Level::isMyObject(Object obj) const
+bool Scene::isMyObject(Object obj) const
 {
-	return *obj.level != nullptr && **obj.level == m_identifier;
+	return *obj.scene != nullptr && **obj.scene == m_identifier;
 }
 
-void Level::draw(sf::RenderTarget& target, sf::RenderStates states) const
+void Scene::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	for (int i = 0; i < m_draw_order.size(); i++)
 	{

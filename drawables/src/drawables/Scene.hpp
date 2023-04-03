@@ -55,16 +55,16 @@ public:
 	sf::Time getDuration() const;
 };
 
-//class for creating scrolling environment for creating (for example) levels
-class Level : public sf::Drawable
+//class for creating scrolling environment for creating scenes
+class Scene : public sf::Drawable
 {
 public:
 
-	Level();
-	Level(const Level&) = default;
-	Level(Level&&) = default;
+	Scene();
+	Scene(const Scene&) = default;
+	Scene(Scene&&) = default;
 
-	~Level();
+	~Scene();
 
 	void setWindow(sf::RenderWindow* window);
 	sf::RenderWindow* getWindow() const;
@@ -72,9 +72,9 @@ public:
 	class Object
 	{
 
-		Object(std::shared_ptr<const size_t*> level);
+		Object(std::shared_ptr<const size_t*> scene);
 
-		std::shared_ptr<const size_t*> level;
+		std::shared_ptr<const size_t*> scene;
 		sf::Drawable* drawable_ptr{};
 		std::function<void(sf::Time)> update{};
 		size_t identifier{};
@@ -100,7 +100,7 @@ public:
 			else update = [](sf::Time) {};
 		}
 		bool operator==(Object other) const;
-		friend class Level;
+		friend class Scene;
 	};
 
 

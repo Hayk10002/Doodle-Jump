@@ -26,6 +26,7 @@ public:
 	virtual bool isDestroyed() const;
 	bool isReadyToBeDeleted() const;
 	bool isFallenOffScreen() const;
+	bool canCollide() const;
 	void setReadyToBeDeleted(bool is_ready);
 	virtual void update(sf::Time) = 0;
 	void setSpecUpdate(SpecUpdateFunctionType spec_update);
@@ -41,6 +42,7 @@ protected:
 	float m_texture_scale{ 0.65 };
 	SpecUpdateFunctionType m_spec_update{ [](sf::Time) {} };
 	OnDoodleJumpFunctionType m_on_doodle_jump{ []() {return true; } };
+	bool m_can_collide{ true };
 
 private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
@@ -86,7 +88,7 @@ public:
 
 class DecayedTile : public Tile
 {
-	float m_speed, m_vert_speed{0}, m_gravity{1200};
+	float m_speed, m_vert_speed{0}, m_gravity{500};
 	float m_left{ 0 }, m_right{ -1 };
 	
 	bool m_is_breaked{ 0 };

@@ -13,7 +13,7 @@
 #include <common/DebugImGui.hpp>
 #include <common/Utils.hpp>
 #include <drawables/ImageBackground.hpp>
-#include <level/level.hpp>
+#include <drawables/Scene.hpp>
 #include <gameObjects/Doodle.hpp>
 
 
@@ -87,12 +87,12 @@ int main()
 	
 	Doodle doodle({ 400, 400 });
 
-	//create level
-	Level level;
-	Level::Object ib_obj = level.addObject(ib);
-	Level::Object doodle_obj = level.addObject(doodle);
-	level.setWindow(&window);
-	level.setScrollingType(InstantScrolling());
+	//create scene
+	Scene scene;
+	Scene::Object ib_obj = scene.addObject(ib);
+	Scene::Object doodle_obj = scene.addObject(doodle);
+	scene.setWindow(&window);
+	scene.setScrollingType(InstantScrolling());
 
 	//setup the user actions
 	thor::ActionMap<UserActions> action_map;
@@ -157,7 +157,7 @@ int main()
 		{
 			sf::Vector2f scale = { (float)window_prev_size.x / window.getSize().x, (float)window_prev_size.y / window.getSize().y };
 			window_prev_size = { window.getSize().x, window.getSize().y };
-			level.zoom(scale, true);
+			scene.zoom(scale, true);
 		}
 		if (action_map.isActive(UserActions::Jump))
 			doodle.jump();
@@ -177,13 +177,13 @@ int main()
 
 		doodle.updateArea(getViewArea(window));
 		if (doodle.isFallenOutOfScreen()) doodle.setPosition(window.mapPixelToCoords({ 400, 400 }));
-		if (doodle.isTooHigh()) level.scrollUp(doodle.getArea().top - doodle.getPosition().y);
-		level.update(dt);
+		if (doodle.isTooHigh()) scene.scrollUp(doodle.getArea().top - doodle.getPosition().y);
+		scene.update(dt);
 
 
 		//drawing
 		window.clear();
-		window.draw(level);
+		window.draw(scene);
 		ImGui::SFML::Render(window);
 		window.display();
 	}

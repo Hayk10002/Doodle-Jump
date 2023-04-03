@@ -40,6 +40,11 @@ bool Tile::isFallenOffScreen() const
 	return m_is_fallen_off_screen;
 }
 
+bool Tile::canCollide() const
+{
+	return m_can_collide;
+}
+
 void Tile::setReadyToBeDeleted(bool is_ready)
 {
 	m_is_ready_to_be_deleted = is_ready;
@@ -172,10 +177,13 @@ DecayedTile::DecayedTile(float speed) :
 	m_speed(speed)
 {
 	m_collision_box_size = sf::Vector2f{ 120, 30 } *m_texture_scale;
-	setDoodleJumpCallback([this]() 
+	setDoodleJumpCallback([this]()
 	{
+		if (m_is_breaked) return false;
 		m_is_breaked = 1;
 		m_animator.play() << "break";
+		m_vert_speed = 400;
+		m_can_collide = false;
 		return false; 
 	});
 	setScale(m_texture_scale, m_texture_scale);
@@ -574,7 +582,7 @@ Tile* Tiles::getTileDoodleWillJump(sf::FloatRect doodle_feet)
 {
 	Tile* res_tile{ nullptr };
 	sf::FloatRect feet{ doodle_feet.left, doodle_feet.top + doodle_feet.height - 1, doodle_feet.width, 1 };
-	for (const auto& tile : m_tiles) if (tile->getCollisionBox().intersects(feet)) res_tile = (tile->m_on_doodle_jump() ? tile.get() : nullptr);
+	for (const auto& tile : m_tiles) if(tile->canCollide()) if (tile->getCollisionBox().intersects(feet)) res_tile = (tile->m_on_doodle_jump() ? tile.get() : nullptr);
 	return res_tile;
 }
 
