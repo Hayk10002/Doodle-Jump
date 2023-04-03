@@ -166,13 +166,13 @@ ViewScrolling::ViewScrolling(sf::Time duration):
 	m_duration(duration)
 {}
 
-Scene::Object::Object(std::shared_ptr<const size_t*> scene) :
-	scene(scene),
+Scene::Object::Object(std::shared_ptr<const size_t*> scene_identifier) :
+	scene_identifier(scene_identifier),
 	identifier(identifier_counter++)
 {}
 
-Scene::Object::Object(const Object& other):
-	scene(other.scene),
+Scene::Object::Object(const Object& other) :
+	scene_identifier(other.scene_identifier),
 	drawable_ptr(other.drawable_ptr),
 	update(other.update),
 	identifier(other.identifier)
@@ -187,20 +187,20 @@ Scene::Object Scene::Object::get_duplicate() const
 
 bool Scene::Object::operator==(Object other) const
 {
-	return std::tie(scene, drawable_ptr, identifier) == std::tie(other.scene, other.drawable_ptr, other.identifier);
+	return std::tie(scene_identifier, drawable_ptr, identifier) == std::tie(other.scene_identifier, other.drawable_ptr, other.identifier);
 }
 
-Scene::Scene()	
+Scene::Scene()
 {
 	setScrollingType(InstantScrolling());
 }
 
 Scene::~Scene()
 {
-	for (auto& obj : m_objects) (*obj.scene) = nullptr;
+	for (auto& obj : m_objects) (*obj.scene_identifier) = nullptr;
 }
 
-void Scene::setWindow(sf::RenderWindow * window)
+void Scene::setWindow(sf::RenderWindow* window)
 {
 	m_window_ptr = window;
 	m_view = m_view_destination = window->getDefaultView();
@@ -219,9 +219,9 @@ size_t Scene::Object::Hasher::operator()(const Object& obj) const
 bool Scene::removeObject(Object obj)
 {
 	if (!isMyObject(obj)) return false;
-	if(!removeFromUpdateList(obj)) return false;
-	if(!removeFromDrawList(obj)) return false;;
-	(*obj.scene) = nullptr;
+	if (!removeFromUpdateList(obj)) return false;
+	if (!removeFromDrawList(obj)) return false;;
+	(*obj.scene_identifier) = nullptr;
 	m_objects.erase(obj);
 	return true;
 }
@@ -257,10 +257,10 @@ bool Scene::updateLast(Object obj)
 bool Scene::addToUpdateList(Object obj, int position)
 {
 	if (!isMyObject(obj)) return false;
-	if(isInUpdateList(obj)) return false;
+	if (isInUpdateList(obj)) return false;
 	if (position < 0) position += m_update_order.size() + 1;
 	position = std::clamp<int>(position, 0, m_update_order.size());
-	m_update_order.insert(m_update_order.begin() + position, obj); 
+	m_update_order.insert(m_update_order.begin() + position, obj);
 	return true;
 }
 
@@ -387,7 +387,7 @@ void Scene::zoom(float scale_x, float scale_y, bool instant)
 void Scene::zoom(sf::Vector2f scale, bool instant)
 {
 	m_in_scroll = true;
-	if(!instant) m_view = getCurrentView();
+	if (!instant) m_view = getCurrentView();
 	m_scroll_timer.restart();
 	sf::Vector2f size = m_view_destination.getSize();
 	size.x /= scale.x;
@@ -398,7 +398,7 @@ void Scene::zoom(sf::Vector2f scale, bool instant)
 
 void Scene::rotate(float angle, bool instant)
 {
-	
+
 	m_in_scroll = true;
 	if (!instant) m_view = getCurrentView();
 	m_scroll_timer.restart();
@@ -464,7 +464,7 @@ std::deque<Scene::Object>::const_iterator Scene::getObjectsItrForDrawList(Object
 
 bool Scene::isMyObject(Object obj) const
 {
-	return *obj.scene != nullptr && **obj.scene == m_identifier;
+	return *obj.scene_identifier != nullptr && **obj.scene_identifier == m_identifier;
 }
 
 void Scene::draw(sf::RenderTarget& target, sf::RenderStates states) const

@@ -72,9 +72,9 @@ public:
 	class Object
 	{
 
-		Object(std::shared_ptr<const size_t*> scene);
+		Object(std::shared_ptr<const size_t*> scene_identifier);
 
-		std::shared_ptr<const size_t*> scene;
+		std::shared_ptr<const size_t*> scene_identifier;
 		sf::Drawable* drawable_ptr{};
 		std::function<void(sf::Time)> update{};
 		size_t identifier{};
