@@ -3,6 +3,8 @@
 #include <Thor/Math.hpp>
 #include <common/Utils.hpp>
 
+#include <level/Level.hpp>
+
 float getYFrom5Nums(float x1, float y1, float x2, float y2, float x)
 {
 	return ((y1 - y2) * x + x1 * y2 - y1 * x2) / (x1 - x2);
@@ -53,13 +55,13 @@ LevelGenerator::Generator LevelGenerator::Generator::promise_type::get_return_ob
 	return Generator{ handle_type::from_promise(*this) };
 }
 
-LevelGenerator::LevelGenerator(sf::RenderWindow* window, Tiles* tiles, Items* items, Monsters* monsters) :
-	m_window(window),
-	m_tiles(tiles),
-	m_items(items),
-	m_monsters(monsters),
+LevelGenerator::LevelGenerator(Level *level) :
+	m_window(&level->window),
+	m_tiles(&level->tiles),
+	m_items(&level->items),
+	m_monsters(&level->monsters),
 	m_generator(getGenerator()),
-	m_generated_height(window->mapPixelToCoords(sf::Vector2i(window->getSize())).y)
+	m_generated_height(level->window.mapPixelToCoords(sf::Vector2i(level->window.getSize())).y)
 {}
 
 void LevelGenerator::update()

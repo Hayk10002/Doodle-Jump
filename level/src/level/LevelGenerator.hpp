@@ -15,6 +15,7 @@ float getYFrom5NumsClamped(float x1, float y1, float x2, float y2, float x);
 float getYFrom5NumsLeftClamped(float x1, float y1, float x2, float y2, float x);
 float getYFrom5NumsRightClamped(float x1, float y1, float x2, float y2, float x);
 
+class Level;
 class LevelGenerator
 {
 	struct Generator 
@@ -49,7 +50,7 @@ class LevelGenerator
 	};
 
 public:
-	LevelGenerator(sf::RenderWindow* window, Tiles* tiles, Items* items, Monsters* monsters);
+	LevelGenerator(Level* level);
 	void update();
 
 private:
@@ -124,7 +125,37 @@ private:
 		
 
 	} m_gen_stats;
-	Tile* generateNormalTile(float& generated_height, float left, float right);
+
+	struct CustonGenerationStats
+	{
+		std::string name;
+		float start_chance;
+		float end_chance;
+		float start_height;
+		float end_height;
+		std::function<void(float, float, float)> generator;
+		float getChanceFromGeneratedHeight(float generated_height);
+	};
+
+	std::deque<CustonGenerationStats> m_custom_gen_stats
+	{
+		{
+			.name{"normal monster"},
+			.start_chance = 0.01,
+			.end_chance = 0.02,
+			.start_height = 5000,
+			.end_height = 30000,
+			.generator{[](float generated_height, float left, float right)
+			{
+				size_t type = thor::Distributions::uniform(1, 4)();
+				switch (type)
+				{
+				case 1:
+					break;
+				}
+			}}
+		}
+	};
 
 
 	Tile* generateNormalTiles(float generated_height, float left, float right, float& tile_density_inv);

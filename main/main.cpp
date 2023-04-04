@@ -16,24 +16,14 @@
 #include <common/Utils.hpp>
 #include <drawables/ImageBackground.hpp>
 #include <drawables/Scene.hpp>
+#include <level/Level.hpp>
 #include <level/LevelGenerator.hpp>
 #include <gameObjects/Doodle.hpp>
 #include <gameObjects/Tiles.hpp>
 #include <gameObjects/Items.hpp>
 #include <gameObjects/Monsters.hpp>
 
-enum class UserActions
-{
-	None,
-	Close,
-	Resize,
-	Left, 
-	Right,
-	Shoot,
-	Die,
-	Ressurect,
-	BreakPoint
-};
+
 
 
 
@@ -52,29 +42,8 @@ int main()
 	//setup thor resource manager
 	init_resources();
 
-	//create the background
-	ImageBackground ib(&global_textures["background"], &window);
-
-	Doodle doodle({ 400, 400 });
-	Tiles tiles(window);
-	Items items(window);
-	Monsters monsters(window);
-
-	LevelGenerator level_generator(&window, &tiles, &items, &monsters);
-
-	//create level scene
-	Scene scene;
-	scene.addObject(ib, []() {});
-	scene.addObject(tiles);
-	auto items_obj = scene.addObject(items);
-	auto doodle_obj = scene.addObject(doodle);
-	auto doodle_dupl_obj = doodle_obj.get_duplicate();
-	doodle_dupl_obj.setUpdate([&doodle]() {doodle.updateForDrawing(); });
-	scene.moveObjectUpInUpdateOrder(items_obj);
-	scene.addObject(monsters);
-	scene.addToUpdateList(doodle_dupl_obj);
-	scene.setWindow(&window);
-	scene.setScrollingType(InstantScrolling());
+	//create the level
+	Level level({ 400, 400 }, window);
 
 	sf::Font default_font;
 	default_font.loadFromFile(RESOURCES_PATH"mistal.ttf");
@@ -141,11 +110,11 @@ int main()
 		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
 		ImGui::DragFloat("Drag speed", &dragging_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
 		ImGui::DragFloat("Game speed", &game_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
-		sf::Vector2f position = doodle.getPosition();
+		sf::Vector2f position = level.doodle.getPosition();
 		ImGui::DragFloat2("Position", (float*)&position, dragging_speed);
-		doodle.setPosition(position);
-		ImGui::Text("Area: {%f, %f, %f, %f}", doodle.getArea().left, doodle.getArea().top, doodle.getArea().width, doodle.getArea().height);
-		ImGui::Text("Is doodle dead: %d", doodle.isDead());
+		level.doodle.setPosition(position);
+		ImGui::Text("Area: {%f, %f, %f, %f}", level.doodle.getArea().left, level.doodle.getArea().top, level.doodle.getArea().width, level.doodle.getArea().height);
+		ImGui::Text("Is doodle dead: %d", level.doodle.isDead());
 		//if (ImGui::IsWindowFocused())  dt = sf::Time::Zero;
 		ImGui::End();
 
@@ -156,46 +125,22 @@ int main()
 			window.setSize({ WINDOW_WIDTH, window.getSize().y });
 			sf::Vector2f scale = { (float)window_prev_size.x / window.getSize().x, (float)window_prev_size.y / window.getSize().y };
 			window_prev_size = { window.getSize().x, window.getSize().y };
-			scene.zoom(scale, true);
+			level.scene.zoom(scale, true);
 		}
-		if (action_map.isActive(UserActions::Left))
-			doodle.left(dt);
-		if (action_map.isActive(UserActions::Right))
-			doodle.right(dt);
-		if (action_map.isActive(UserActions::Shoot))
-		{
-			sf::Vector2f mouse_pos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-			sf::Vector2f doodle_pos = doodle.getPosition();
-			sf::Vector2f shoot_vec = mouse_pos - doodle_pos;
-			float angle = thor::TrigonometricTraits<float>::arcTan2(shoot_vec.y, shoot_vec.x);
-			if (angle > 90) angle -= 360;
-			doodle.shoot(angle + 90);
-		}
-		if (action_map.isActive(UserActions::Die)) doodle.dieShrink(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
-		if (action_map.isActive(UserActions::Ressurect)) doodle.ressurrect({ window.mapPixelToCoords(sf::Mouse::getPosition(window)).x, window.mapPixelToCoords(sf::Vector2i{ window.getSize() } / 2).y });
 		if (action_map.isActive(UserActions::BreakPoint))
 		{
 			int debug = 0;
 		}
 
-		level_generator.update();
-		doodle.updateArea(utils::getViewArea(window));
-		if(!doodle.isDead()){
-			doodle.updateTiles(tiles);
-			doodle.updateItems(items);
-			doodle.updateMonsters(monsters);
-		}
-		scene.updateObjects(dt);
-		if (doodle.isTooHigh()) scene.scrollUp(doodle.getArea().top - doodle.getPosition().y);
-		scene.updateScrolling();
-		ib.update();
+		level.handleGameEvents(action_map, dt);
+		level.update(dt);
 
 		points_text.setPosition(window.mapPixelToCoords({ 10, 10 }));
 		points_text.setString(std::to_string(int(-window.mapPixelToCoords({ 0, 0 }).y)));
 	
 		//drawing
 		window.clear();
-		window.draw(scene);
+		window.draw(level.scene);
 		window.draw(points_text);
 		ImGui::SFML::Render(window);
 		window.display();

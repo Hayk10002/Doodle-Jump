@@ -91,12 +91,12 @@ public:
 		Object get_duplicate() const;
 		template<class F>
 			requires std::invocable<F> || std::invocable<F, sf::Time>
-		void setUpdate(F&& update_function)
+		void setUpdate(F update_function)
 		{
 			if constexpr (requires { update_function(sf::Time::Zero); })
-				update = [&update_function](sf::Time t) {update_function(t); };
+				update = [update_function](sf::Time t) {update_function(t); };
 			else if constexpr (requires { update_function(); })
-				update = [&update_function](sf::Time) {update_function(); };
+				update = [update_function](sf::Time) {update_function(); };
 			else update = [](sf::Time) {};
 		}
 		bool operator==(Object other) const;
@@ -124,15 +124,11 @@ public:
 
 	template<std::derived_from<sf::Drawable> T, class F>
 		requires std::invocable<F> || std::invocable<F, sf::Time>
-	Object addObject(T& obj, F&& update)
+	Object addObject(T& obj, F update)
 	{
 		Object object(std::make_shared<const size_t*>(&m_identifier));
 		object.drawable_ptr = &obj;
-		if constexpr (std::invocable<F, sf::Time>)
-			object.update = [&update](sf::Time t) { update(t); };
-		else if constexpr (std::invocable<F>)
-			object.update = [&update](sf::Time) { update(); };
-		else object.update = [](sf::Time) {};
+		object.setUpdate(update);
 
 		m_objects.insert(object);
 		addToUpdateList(object);
