@@ -277,6 +277,11 @@ void BombTile::updateHeight(float current_height)
 	m_current_height = current_height;
 }
 
+void BombTile::updateHeight(sf::RenderWindow& window)
+{
+	updateHeight(window.mapCoordsToPixel(getPosition()).y - window.getSize().y / 2.f);
+}
+
 bool BombTile::isDestroyed() const
 {
 	return m_is_gone;

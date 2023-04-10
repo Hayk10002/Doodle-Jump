@@ -78,7 +78,7 @@ void Monster::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	target.draw(sf::Sprite(*this), states);
 }
 
-HorizontalMovingMonster::HorizontalMovingMonster(float speed) :
+BlueOneEyedMonster::BlueOneEyedMonster(float speed) :
 	Monster(&global_textures["monsters"]),
 	m_speed(speed)
 {
@@ -88,7 +88,7 @@ HorizontalMovingMonster::HorizontalMovingMonster(float speed) :
 	setScale(m_texture_scale, m_texture_scale);
 }
 
-void HorizontalMovingMonster::update(sf::Time dt)
+void BlueOneEyedMonster::update(sf::Time dt)
 {
 	m_existing_time += dt;
 	if (m_collision_box == sf::FloatRect{}) m_collision_box = sf::FloatRect(getPosition() - m_collision_box_size / 2.f, m_collision_box_size);
@@ -114,19 +114,19 @@ void HorizontalMovingMonster::update(sf::Time dt)
 	m_collision_box = sf::FloatRect(getPosition() - m_collision_box_size / 2.f, m_collision_box_size);
 }
 
-void HorizontalMovingMonster::updateMovingLocation(sf::FloatRect area)
+void BlueOneEyedMonster::updateMovingLocation(sf::FloatRect area)
 {
 	m_left = area.left;
 	m_right = area.left + area.width;
 }
 
-void HorizontalMovingMonster::updateMovingLocation(float left, float right)
+void BlueOneEyedMonster::updateMovingLocation(float left, float right)
 {
 	m_left = left;
 	m_right = right;
 }
 
-VirusMonster::VirusMonster() :
+CamronMonster::CamronMonster() :
 	Monster(&global_textures["monsters"])
 {
 	m_collision_box_size = sf::Vector2f{76, 52} * m_texture_scale;
@@ -135,7 +135,7 @@ VirusMonster::VirusMonster() :
 	setScale(m_texture_scale, m_texture_scale);
 }
 
-void VirusMonster::update(sf::Time dt)
+void CamronMonster::update(sf::Time dt)
 {
 	m_existing_time += dt;
 	if (!isDead())
@@ -149,7 +149,7 @@ void VirusMonster::update(sf::Time dt)
 	m_collision_box = sf::FloatRect(getPosition() - m_collision_box_size / 2.f, m_collision_box_size);
 }
 
-SpiderMonster::SpiderMonster() :
+PurpleSpiderMonster::PurpleSpiderMonster() :
 	Monster(&global_textures["monsters"])
 {
 	m_collision_box_size = sf::Vector2f{ 70, 110 } *m_texture_scale;
@@ -158,7 +158,7 @@ SpiderMonster::SpiderMonster() :
 	setScale(m_texture_scale, m_texture_scale);
 }
 
-void SpiderMonster::update(sf::Time dt)
+void PurpleSpiderMonster::update(sf::Time dt)
 {
 	m_existing_time += dt;
 	if (!isDead())
@@ -172,7 +172,7 @@ void SpiderMonster::update(sf::Time dt)
 	m_collision_box = sf::FloatRect(getPosition() - m_collision_box_size / 2.f, m_collision_box_size);
 }
 
-BigBlueMonster::BigBlueMonster():
+LargeBlueMonster::LargeBlueMonster():
 	Monster(&global_textures["monsters"])
 {
 	m_collision_box_size = sf::Vector2f{ 130, 106 } *m_texture_scale;
@@ -181,7 +181,7 @@ BigBlueMonster::BigBlueMonster():
 	setScale(m_texture_scale, m_texture_scale);
 }
 
-void BigBlueMonster::update(sf::Time dt)
+void LargeBlueMonster::update(sf::Time dt)
 {
 	m_existing_time += dt;
 	if (!isDead())
@@ -196,7 +196,7 @@ void BigBlueMonster::update(sf::Time dt)
 	m_collision_box = sf::FloatRect(getPosition() - sf::Vector2f{m_collision_box_size.x / 2.f, m_collision_box_size.y}, m_collision_box_size);
 }
 
-UFOMonster::UFOMonster() :
+UFO::UFO() :
 	Monster(&global_textures["monsters"]),
 	m_light(global_textures["monsters"])
 {
@@ -243,7 +243,7 @@ UFOMonster::UFOMonster() :
 	});
 }
 
-void UFOMonster::update(sf::Time dt)
+void UFO::update(sf::Time dt)
 {
 	m_existing_time += m_animation_speed * dt;
 	if (!isDead())
@@ -263,7 +263,7 @@ void UFOMonster::update(sf::Time dt)
 	m_light.setColor({ 255, 255, 255, sf::Uint8((thor::Distributions::uniform(0, 1)()) ? 255 : 128) });
 }
 
-bool UFOMonster::getShooted(const Bullet& bullet)
+bool UFO::getShooted(const Bullet& bullet)
 {
 	if (bullet.getGlobalBounds().intersects(m_UFO_collision_boxes[0]) ||
 		bullet.getGlobalBounds().intersects(m_UFO_collision_boxes[1]))
@@ -271,13 +271,13 @@ bool UFOMonster::getShooted(const Bullet& bullet)
 	return false;
 }
 
-void UFOMonster::draw(sf::RenderTarget& target, sf::RenderStates states) const
+void UFO::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	target.draw(m_light, states);
 	target.draw(sf::Sprite(*this), states);
 }
 
-BlackHoleMonster::BlackHoleMonster() :
+BlackHole::BlackHole() :
 	Monster(&global_textures["monsters"])
 {
 	m_collision_box_size = sf::Vector2f{ 110, 90 } *m_texture_scale;
@@ -293,24 +293,24 @@ BlackHoleMonster::BlackHoleMonster() :
 	});
 }
 
-void BlackHoleMonster::update(sf::Time dt)
+void BlackHole::update(sf::Time dt)
 {
 	m_collision_box = sf::FloatRect(getPosition() + m_collision_box_offset, m_collision_box_size);
 	if (m_doodle && !m_doodle->isDead()) m_doodle = nullptr;
 }
 
-bool BlackHoleMonster::getShooted(const Bullet& bullet)
+bool BlackHole::getShooted(const Bullet& bullet)
 {
 	return false;
 }
 
-void BlackHoleMonster::draw(sf::RenderTarget& target, sf::RenderStates states) const
+void BlackHole::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	target.draw(Sprite(*this), states);
 	if (m_doodle) target.draw(*m_doodle, states);
 }
 
-GreenOvalMonster::GreenOvalMonster():
+OvalGreenMonster::OvalGreenMonster():
 	Monster(&global_textures["monsters"]),
 	m_animations(new thor::AnimationMap<sf::Sprite, std::string>()),
 	m_animator(*m_animations)
@@ -326,7 +326,7 @@ GreenOvalMonster::GreenOvalMonster():
 	m_animator.play() << thor::Playback::loop("default");
 }
 
-void GreenOvalMonster::update(sf::Time dt)
+void OvalGreenMonster::update(sf::Time dt)
 {
 	m_existing_time += dt;
 	if (!isDead())
@@ -343,7 +343,7 @@ void GreenOvalMonster::update(sf::Time dt)
 	m_collision_box = sf::FloatRect(getPosition() - sf::Vector2f{ m_collision_box_size.x / 2.f, m_collision_box_size.y }, m_collision_box_size);
 }
 
-bool GreenOvalMonster::getShooted(const Bullet& bullet)
+bool OvalGreenMonster::getShooted(const Bullet& bullet)
 {
 	m_hp--;
 	if (m_hp > 0) m_animator.play() << "hurting" << thor::Playback::loop("default");
@@ -391,7 +391,7 @@ bool FlatGreenMonster::getShooted(const Bullet& bullet)
 	return true;
 }
 
-BigGreenMonster::BigGreenMonster() :
+LargeGreenMonster::LargeGreenMonster() :
 	Monster(&global_textures["monsters"]),
 	m_animations(new thor::AnimationMap<sf::Sprite, std::string>()),
 	m_animator(*m_animations)
@@ -413,7 +413,7 @@ BigGreenMonster::BigGreenMonster() :
 	m_animator.play() << thor::Playback::loop("default");
 }
 
-void BigGreenMonster::update(sf::Time dt)
+void LargeGreenMonster::update(sf::Time dt)
 {
 	m_existing_time += dt;
 	if(isDead()) updatePhysics(dt);
@@ -422,7 +422,7 @@ void BigGreenMonster::update(sf::Time dt)
 	m_collision_box = sf::FloatRect(getPosition() - sf::Vector2f{ m_collision_box_size.x / 2.f, m_collision_box_size.y }, m_collision_box_size);
 }
 
-bool BigGreenMonster::getShooted(const Bullet& bullet)
+bool LargeGreenMonster::getShooted(const Bullet& bullet)
 {
 	m_hp--;
 	if (m_hp > 0) m_animator.play() << thor::Playback::loop("hurting");
@@ -471,7 +471,7 @@ void BlueWingedMonster::update(sf::Time dt)
 
 }
 
-TheTerrifyMonster::TheTerrifyMonster(sf::Vector2f speed) :
+TheTerrifyingMonster::TheTerrifyingMonster(sf::Vector2f speed) :
 	Monster(&global_textures["monsters"]),
 	m_animations(new thor::AnimationMap<sf::Sprite, std::string>()),
 	m_animator(*m_animations),
@@ -493,7 +493,7 @@ TheTerrifyMonster::TheTerrifyMonster(sf::Vector2f speed) :
 	m_animator.play() << thor::Playback::loop("default");
 }
 
-void TheTerrifyMonster::update(sf::Time dt)
+void TheTerrifyingMonster::update(sf::Time dt)
 {
 	if (m_collision_box == sf::FloatRect{}) m_collision_box = sf::FloatRect(getPosition() - m_collision_box_size / 2.f, m_collision_box_size);
 	m_spec_update(dt);
@@ -513,7 +513,7 @@ void TheTerrifyMonster::update(sf::Time dt)
 	m_collision_box = sf::FloatRect(getPosition() - m_collision_box_size / 2.f, m_collision_box_size);
 }
 
-bool TheTerrifyMonster::getShooted(const Bullet& bullet)
+bool TheTerrifyingMonster::getShooted(const Bullet& bullet)
 {
 	m_hp--;
 	if (m_hp > 0) m_animator.play() << "hurting" << thor::Playback::loop("default");
@@ -521,13 +521,13 @@ bool TheTerrifyMonster::getShooted(const Bullet& bullet)
 	return true;
 }
 
-void TheTerrifyMonster::updateMovingLocation(sf::FloatRect area)
+void TheTerrifyingMonster::updateMovingLocation(sf::FloatRect area)
 {
 	m_left = area.left;
 	m_right = area.left + area.width;
 }
 
-void TheTerrifyMonster::updateMovingLocation(float left, float right)
+void TheTerrifyingMonster::updateMovingLocation(float left, float right)
 {
 	m_left = left;
 	m_right = right;

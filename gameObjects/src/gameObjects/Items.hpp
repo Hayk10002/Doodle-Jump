@@ -193,7 +193,8 @@ public:
 	~Shield();
 };
 
-
+class Level;
+class LevelGenerator;
 class Items : public sf::Drawable
 {
 private:
@@ -208,5 +209,6 @@ public:
 
 private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+	friend class Level;
 	friend class LevelGenerator;
 };

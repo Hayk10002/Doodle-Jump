@@ -1,32 +1,12 @@
 #include "LevelGenerator.hpp"
+#include <ranges>
+#include <algorithm>
 
 #include <Thor/Math.hpp>
 #include <common/Utils.hpp>
 
 #include <level/Level.hpp>
 
-float getYFrom5Nums(float x1, float y1, float x2, float y2, float x)
-{
-	return ((y1 - y2) * x + x1 * y2 - y1 * x2) / (x1 - x2);
-}
-
-float getYFrom5NumsClamped(float x1, float y1, float x2, float y2, float x)
-{
-	x = std::clamp(x, x1, x2);
-	return getYFrom5Nums(x1, y1, x2, y2, x);
-}
-
-float getYFrom5NumsLeftClamped(float x1, float y1, float x2, float y2, float x)
-{
-	x = std::max(x, x1);
-	return getYFrom5Nums(x1, y1, x2, y2, x);
-}
-
-float getYFrom5NumsRightClamped(float x1, float y1, float x2, float y2, float x)
-{
-	x = std::min(x, x2);
-	return getYFrom5Nums(x1, y1, x2, y2, x);
-}
 
 LevelGenerator::Generator::~Generator()
 {
@@ -93,16 +73,6 @@ LevelGenerator::Generator LevelGenerator::getGenerator()
 	}
 }
 
-bool LevelGenerator::NormalGenerationStats::getTrueWithChance(float chance)
-{
-	return from_0_to_1() <= chance;
-}
-
-float LevelGenerator::NormalGenerationStats::randomSignWithChance(float positive_chance)
-{
-	return getTrueWithChance(positive_chance) ? 1.f : -1.f;
-}
-
 float LevelGenerator::NormalGenerationStats::getTileDensityInverseFromGeneratedHeight(float generated_height)
 {
 	return getYFrom5NumsRightClamped(0, 1, minimum_density_height, minimum_density_inverse, -generated_height);
@@ -165,7 +135,7 @@ float LevelGenerator::NormalGenerationStats::getJetpackChanceFromGeneratedHeight
 Tile* LevelGenerator::generateNormalTiles(float generated_height, float left, float right, float& tile_density_inv)
 {
 	NormalTile* tile;
-	Tile* returning_tile;
+	Tile* returning_tile{};
 	if (tile_density_inv < 1)
 	{
 		size_t tile_count = std::max(1, int((right - left) / m_gen_stats.tile_maximum_interval.x));
@@ -202,7 +172,7 @@ Tile* LevelGenerator::generateNormalTiles(float generated_height, float left, fl
 Tile* LevelGenerator::generateHorizontalTile(float generated_height, float left, float right, float& tile_density_inv)
 {
 	tile_density_inv = std::max(1.f, tile_density_inv);
-	HorizontalSlidingTile* tile = new HorizontalSlidingTile(m_gen_stats.randomSignWithChance(0.5) * m_gen_stats.getHorizontalTileSpeedMultiplierFromGeneratedHeight(generated_height) * m_gen_stats.horizontal_tile_speed_distribution());
+	HorizontalSlidingTile* tile = new HorizontalSlidingTile(randomSignWithChance(0.5) * m_gen_stats.getHorizontalTileSpeedMultiplierFromGeneratedHeight(generated_height) * m_gen_stats.horizontal_tile_speed_distribution());
 	tile->updateMovingLocation(left, right);
 	tile->setPosition(thor::Distributions::uniform(left + tile->getCollisionBoxSize().x / 2, right - tile->getCollisionBoxSize().x / 2)(), generated_height);
 	m_tiles->m_tiles.push_back(std::unique_ptr<HorizontalSlidingTile>(tile));
@@ -212,8 +182,8 @@ Tile* LevelGenerator::generateHorizontalTile(float generated_height, float left,
 void LevelGenerator::generateDecayedTile(float generated_height, float left, float right, float tile_density_inv)
 {
 	if (tile_density_inv < 2) return;
-	float speed = (m_gen_stats.getTrueWithChance(m_gen_stats.getDecayedMovingTileChanceFromGeneratedHeight(generated_height)) ?
-		m_gen_stats.randomSignWithChance(0.5) * m_gen_stats.getDecayedMovingTileSpeedMultiplierFromGeneratedHeight(generated_height) * m_gen_stats.decayed_moving_tile_speed_distribution() :
+	float speed = (getTrueWithChance(m_gen_stats.getDecayedMovingTileChanceFromGeneratedHeight(generated_height)) ?
+		randomSignWithChance(0.5) * m_gen_stats.getDecayedMovingTileSpeedMultiplierFromGeneratedHeight(generated_height) * m_gen_stats.decayed_moving_tile_speed_distribution() :
 		0);
 
 	DecayedTile* tile = new DecayedTile(speed);
@@ -261,38 +231,389 @@ void LevelGenerator::generateNormalGeneration(float& generated_height, float lef
 {
 	Tile* current_tile;
 	float tile_density_inv = m_gen_stats.getCurrentTileDensityInverse(generated_height, left, right);
-	if (m_gen_stats.getTrueWithChance(m_gen_stats.getHorizontalTileChanceFromGeneratedHeight(generated_height)))
+	if (getTrueWithChance(m_gen_stats.getHorizontalTileChanceFromGeneratedHeight(generated_height)))
 		current_tile = generateHorizontalTile(generated_height, left, right, tile_density_inv);
 	else current_tile = generateNormalTiles(generated_height, left, right, tile_density_inv);
 
-	if (m_gen_stats.getTrueWithChance(m_gen_stats.getSpringChanceFromGeneratedHeight(generated_height)))
+	if (getTrueWithChance(m_gen_stats.getSpringChanceFromGeneratedHeight(generated_height)))
 	{
 		generateSpringOnTile(current_tile);
 		tile_density_inv = 6;
 	}
-	else if (m_gen_stats.getTrueWithChance(m_gen_stats.getTrampolineChanceFromGeneratedHeight(generated_height)))
+	else if (getTrueWithChance(m_gen_stats.getTrampolineChanceFromGeneratedHeight(generated_height)))
 	{
 		generateTrampolineOnTile(current_tile);
 		tile_density_inv = 6;
 	}
-	else if (m_gen_stats.getTrueWithChance(m_gen_stats.getPropellerHatChanceFromGeneratedHeight(generated_height)))
+	else if (getTrueWithChance(m_gen_stats.getPropellerHatChanceFromGeneratedHeight(generated_height)))
 	{
 		generatePropellerHatOnTile(current_tile);
 		tile_density_inv = 6;
 	}
-	else if (m_gen_stats.getTrueWithChance(m_gen_stats.getJetpackChanceFromGeneratedHeight(generated_height)))
+	else if (getTrueWithChance(m_gen_stats.getJetpackChanceFromGeneratedHeight(generated_height)))
 	{
 		generateJetpackOnTile(current_tile);
 		tile_density_inv = 6;
 	}
-	else if (m_gen_stats.getTrueWithChance(m_gen_stats.spring_shoes_chance))
+	else if (getTrueWithChance(m_gen_stats.spring_shoes_chance))
 	{
 		generateSpringShoesOnTile(current_tile);
 		tile_density_inv = 6;
 	}
 
-	if (m_gen_stats.getTrueWithChance(m_gen_stats.getDecayedTileChanceFromGeneratedHeight(generated_height)))
+	if (getTrueWithChance(m_gen_stats.getDecayedTileChanceFromGeneratedHeight(generated_height)))
 		generateDecayedTile(generated_height, left, right, tile_density_inv);
 
 	generated_height -= std::min(m_gen_stats.tile_maximum_interval.y, tile_density_inv * m_gen_stats.tile_minimum_interval.y);
+}
+
+
+
+float Generation::generateImpl(float generated_height, float left, float right)
+{
+	return 0.0f;
+}
+
+float Generation::generate(float generated_height, float left, float right)
+{
+	if (!level) return 0.0f;
+	else return generateImpl(generated_height, left, right);
+}
+
+void Generation::setCurrentLevelForGenerating(Level* level)
+{
+	Generation::level = level;
+}
+
+Level* Generation::getCurrentLevelForGenerating()
+{
+	return level;
+}
+
+
+
+LevelGeneratorNew::Generator::~Generator()
+{
+	if (coro) coro.destroy();
+}
+
+LevelGeneratorNew::Generator::Generator(Generator&& oth) noexcept
+{
+	oth.coro = nullptr;
+}
+
+LevelGeneratorNew::Generator& LevelGeneratorNew::Generator::operator=(Generator&& oth) noexcept
+{
+	coro = std::exchange(oth.coro, nullptr);
+	return *this;
+}
+
+bool LevelGeneratorNew::Generator::resume()
+{
+	if (!coro.done()) coro.resume();
+	return !coro.done();
+}
+
+LevelGeneratorNew::Generator LevelGeneratorNew::Generator::promise_type::get_return_object()
+{
+	return Generator{ handle_type::from_promise(*this) };
+}
+
+LevelGeneratorNew::LevelGeneratorNew():
+	m_generator(getGenerator())
+{}
+
+void LevelGeneratorNew::update()
+{
+	while (true)
+	{
+		m_generating_area = getGeneratingArea();
+		if (m_generating_area.height < 0 || !m_generator.resume()) break;
+	}
+}
+
+void LevelGeneratorNew::setGenerationSettings(GenerationSettings settings)
+{
+	m_settings = settings;
+}
+
+void LevelGeneratorNew::setLevelForGeneration(Level * level_ptr)
+{
+	Generation::setCurrentLevelForGenerating(level_ptr);
+}
+
+Level* LevelGeneratorNew::getLevelForGeneration()
+{
+	return Generation::getCurrentLevelForGenerating();
+}
+
+sf::FloatRect LevelGeneratorNew::getGeneratingArea()
+{
+	sf::FloatRect area{ utils::getViewArea(getLevelForGeneration()->window) };
+	if (m_generated_height > area.top + area.height) m_generated_height = area.top + area.height;
+	area.top -= area.height / 2;
+	area.height = m_generated_height - area.top;
+	return area;
+}
+
+LevelGeneratorNew::Generator LevelGeneratorNew::getGenerator()
+{
+	for (int i = 0; m_settings.repeate_count == -1 || i < m_settings.repeate_count; i++)
+	{
+		m_generated_height -= m_generation->generate(m_generated_height, m_generating_area.left, m_generating_area.left + m_generating_area.width);
+		co_await std::suspend_always{};
+	}
+}
+
+
+
+float TileGeneration::generateImpl(float generated_height, float left, float right)
+{
+	Tile* tile = getTile();
+	if (!tile) return 0.0f;
+	sf::Vector2f position = position_returner();
+	tile->setPosition(position.x, generated_height - position.y);
+	getCurrentLevelForGenerating()->addTile(tile);
+	if (item_generation)
+	{
+		item_generation->tile = tile;
+		item_generation->generate(generated_height, left, right);
+	}
+	return height_returner();
+}
+
+Tile* TileGeneration::getTile()
+{
+	return nullptr;
+}
+
+
+
+float ItemGeneration::generateImpl(float, float, float)
+{
+	Item* item = getItem();
+	if (!item) return 0.0f;
+	getCurrentLevelForGenerating()->addItem(item);
+	return 0.0f;
+}
+
+Item* ItemGeneration::getItem()
+{
+	return nullptr;
+}
+
+
+
+float MonsterGeneration::generateImpl(float generated_height, float, float)
+{
+	Monster* monster = getMonster();
+	if (!monster) return 0.0f;
+	sf::Vector2f position = position_returner();
+	monster->setPosition(position.x, generated_height - position.y);
+	getCurrentLevelForGenerating()->addMonster(monster);
+	return 0.0f;
+}
+
+Monster* MonsterGeneration::getMonster()
+{
+	return nullptr;
+}
+
+
+
+Tile* NormalTileGeneration::getTile()
+{
+	auto* tile = new NormalTile;
+	return tile;
+}
+
+Tile* HorizontalSlidingTileGeneration::getTile()
+{
+	auto* tile = new HorizontalSlidingTile(speed_returner());
+	tile->updateMovingLocation(left_returner(), right_returner());
+	return tile;
+}
+
+Tile* VerticalSlidingTileGeneration::getTile()
+{
+	auto* tile = new VerticalSlidingTile(speed_returner());
+	tile->updateMovingLocation(top_returner(), bottom_returner());
+	return tile;
+}
+
+Tile* DecayedTileGeneration::getTile()
+{
+	auto* tile = new DecayedTile(speed_returner());
+	tile->updateMovingLocation(left_returner(), right_returner());
+	return tile;
+}
+
+Tile* BombTileGeneration::getTile()
+{
+	auto* tile = new BombTile(exploding_height_returner());
+	tile->setSpecUpdate([tile, this](sf::Time) { tile->updateHeight(getCurrentLevelForGenerating()->window); });
+	return tile;
+}
+
+Tile* OneTimeTileGeneration::getTile()
+{
+	auto* tile = new OneTimeTile;
+	return tile;
+}
+
+Tile* TeleportTileGeneration::getTile()
+{
+	auto* tile = new TeleportTile;
+	for (const auto& returner : offset_returners) tile->addNewPosition(returner());
+	return tile;
+}
+
+Tile* ClusterTileGeneration::getTile()
+{
+	auto* tile = new ClusterTile(id);
+	for (const auto& returner : offset_returners) tile->addNewPosition(returner());
+	return tile;
+}
+
+
+
+Item* SpringGeneration::getItem()
+{
+	auto* item = new Spring(tile);
+	item->setOffsetFromTile(tile_offset_returner());
+	return item;
+}
+
+Item* TrampolineGeneration::getItem()
+{
+	auto* item = new Trampoline(tile);
+	item->setOffsetFromTile(tile_offset_returner());
+	return item;
+}
+
+Item* PropellerHatGeneration::getItem()
+{
+	auto* item = new PropellerHat(tile);
+	item->setOffsetFromTile(tile_offset_returner());
+	return item;
+}
+
+Item* JetpackGeneration::getItem()
+{
+	auto* item = new Jetpack(tile);
+	item->setOffsetFromTile(tile_offset_returner());
+	return item;
+}
+
+Item* SpringShoesGeneration::getItem()
+{
+	auto* item = new SpringShoes(tile, max_use_count_returner(), &getCurrentLevelForGenerating()->tiles, &getCurrentLevelForGenerating()->monsters);
+	item->setOffsetFromTile(tile_offset_returner());
+	return item;
+}
+
+
+
+Monster* BlueOneEyedMonsterGeneration::getMonster()
+{
+	auto* monster = new BlueOneEyedMonster(speed_returner());
+	monster->updateMovingLocation(left_returner(), right_returner());
+	return monster;
+}
+
+Monster* CamronMonsterGeneration::getMonster()
+{
+	auto* monster = new CamronMonster;
+	return monster;
+}
+
+Monster* PurpleSpiderMonsterGeneration::getMonster()
+{
+	auto* monster = new PurpleSpiderMonster;
+	return monster;
+}
+
+Monster* LargeBlueMonsterGeneration::getMonster()
+{
+	auto* monster = new LargeBlueMonster;
+	return monster;
+}
+
+Monster* UFOGeneration::getMonster()
+{
+	auto* monster = new UFO;
+	return monster;
+}
+
+Monster* BlackHoleGeneration::getMonster()
+{
+	auto* monster = new BlackHole;
+	return monster;
+}
+
+Monster* OvalGreenMonsterGeneration::getMonster()
+{
+	auto* monster = new OvalGreenMonster;
+	return monster;
+}
+
+Monster* FlatGreenMonsterGeneration::getMonster()
+{
+	auto* monster = new FlatGreenMonster;
+	return monster;
+}
+
+Monster* LargeGreenMonsterGeneration::getMonster()
+{
+	auto* monster = new LargeGreenMonster;
+	return monster;
+}
+
+Monster* BlueWingedMonsterGeneration::getMonster()
+{
+	auto* monster = new BlueWingedMonster;
+	return monster;
+}
+
+Monster* TheTerrifyingMonsterGeneration::getMonster()
+{
+	auto* monster = new TheTerrifyingMonster(speed_returner());
+	monster->updateMovingLocation(left_returner(), right_returner());
+	return monster;
+}
+
+
+
+float GenerationWithChance::generateImpl(float generated_height, float left, float right)
+{
+	if (!generation) return 0.0f;
+	if (getTrueWithChance(chance_returner())) return generation->generate(generated_height, left, right);
+	return 0.0f;
+
+}
+
+float GroupGeneration::generateImpl(float generated_height, float left, float right)
+{
+	float max_height = 0.0f;
+	for (auto& generation : generations) if (generation)
+	{
+		float height = generation->generate(generated_height, left, right);
+		max_height = std::max(max_height, height);
+	}
+	return max_height;
+}
+
+float ConsecutiveGeneration::generateImpl(float generated_height, float left, float right)
+{
+	float sum_height = 0.0f;
+	for (auto& generation : generations) if (generation) sum_height += generation->generate(generated_height - sum_height, left, right);
+	return sum_height;
+}
+
+float PickOneGeneration::generateImpl(float generated_height, float left, float right)
+{
+	std::deque<float> chances = generations | std::views::transform([](const ProbabilityGenerationPair& val) { return val.relative_probability_returner(); }) | std::ranges::to<std::deque>();
+	size_t pair_ind = utils::pickOneWithRelativeProbabilities(chances);
+	if (generations[pair_ind].generation) return generations[pair_ind].generation->generate(generated_height, left, right);
+	return 0.0f;
 }

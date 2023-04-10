@@ -69,47 +69,47 @@ private:
 	friend class Monsters;
 };
 
-class HorizontalMovingMonster : public Monster
+class BlueOneEyedMonster : public Monster
 {
 	float m_speed;
 	float m_left{ 0 }, m_right{ -1 };
 	sf::Time m_oscillation_time{ sf::seconds(0.7) };
 	float m_oscillation_size{ 15 };
 public:
-	HorizontalMovingMonster(float speed);
+	BlueOneEyedMonster(float speed);
 	void update(sf::Time dt) override;
 	void updateMovingLocation(sf::FloatRect area);
 	void updateMovingLocation(float left, float right);
 };
 
-class VirusMonster : public Monster
+class CamronMonster : public Monster
 {
 	sf::Time m_oscillation_time{ sf::seconds(0.5) };
 	float m_oscillation_size{ 15 };
 public:
-	VirusMonster();
+	CamronMonster();
 	void update(sf::Time dt) override;
 };
 
-class SpiderMonster : public Monster
+class PurpleSpiderMonster : public Monster
 {
 	sf::Time m_oscillation_time{ sf::seconds(0.5) };
 	float m_oscillation_size{ 15 };
 public:
-	SpiderMonster();
+	PurpleSpiderMonster();
 	void update(sf::Time dt) override;
 };
 
-class BigBlueMonster : public Monster
+class LargeBlueMonster : public Monster
 {
 	sf::Time m_oscillation_time{ sf::seconds(1) };
 	sf::Vector2f m_oscillation_size{ 15, 15 };
 public:
-	BigBlueMonster();
+	LargeBlueMonster();
 	void update(sf::Time dt) override;
 };
 
-class UFOMonster : public Monster
+class UFO : public Monster
 {
 	sf::Time m_oscillation_time{ sf::seconds(4) };
 	sf::Vector2f m_oscillation_size{ 40, 20 };
@@ -131,7 +131,7 @@ class UFOMonster : public Monster
 	sf::FloatRect m_light_collision_box;
 	sf::Sprite m_light;
 public:
-	UFOMonster();
+	UFO();
 	void update(sf::Time dt) override;
 	bool getShooted(const Bullet& bullet) override;
 
@@ -139,12 +139,12 @@ private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 };
 
-class BlackHoleMonster : public Monster
+class BlackHole : public Monster
 {
 	sf::Vector2f m_collision_box_offset{ sf::Vector2f{-55, -52}*m_texture_scale };
 	Doodle* m_doodle{ nullptr };
 public:
-	BlackHoleMonster();
+	BlackHole();
 	void update(sf::Time dt) override;
 	bool getShooted(const Bullet& bullet) override;
 
@@ -152,7 +152,7 @@ private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 };
 
-class GreenOvalMonster: public Monster
+class OvalGreenMonster: public Monster
 {
 	sf::Time m_oscillation_time{ sf::seconds(1) };
 	sf::Vector2f m_oscillation_size{ 15, 15 };
@@ -162,7 +162,7 @@ class GreenOvalMonster: public Monster
 	thor::Animator<sf::Sprite, std::string> m_animator;
 
 public:
-	GreenOvalMonster();
+	OvalGreenMonster();
 	void update(sf::Time dt) override;
 	bool getShooted(const Bullet& bullet) override;
 };
@@ -182,7 +182,7 @@ public:
 	bool getShooted(const Bullet& bullet) override;
 };
 
-class BigGreenMonster : public Monster
+class LargeGreenMonster : public Monster
 {
 	int m_hp = 2;
 
@@ -190,7 +190,7 @@ class BigGreenMonster : public Monster
 	thor::Animator<sf::Sprite, std::string> m_animator;
 
 public:
-	BigGreenMonster();
+	LargeGreenMonster();
 	void update(sf::Time dt) override;
 	bool getShooted(const Bullet& bullet) override;
 };
@@ -207,7 +207,7 @@ public:
 	void update(sf::Time dt) override;
 };
 
-class TheTerrifyMonster : public Monster
+class TheTerrifyingMonster : public Monster
 {
 	sf::Vector2f m_speed;
 	float m_left{ 0 }, m_right{ -1 };
@@ -217,7 +217,7 @@ class TheTerrifyMonster : public Monster
 
 	int m_hp = 5;
 public:
-	TheTerrifyMonster(sf::Vector2f speed);
+	TheTerrifyingMonster(sf::Vector2f speed);
 	void update(sf::Time dt) override;
 	bool getShooted(const Bullet& bullet) override;
 
@@ -225,6 +225,7 @@ public:
 	void updateMovingLocation(float left, float right);
 };
 
+class Level;
 class LevelGenerator;
 class Monsters : public sf::Drawable
 {
@@ -243,6 +244,7 @@ public:
 
 private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+	friend class Level;
 	friend class LevelGenerator;
 
 };

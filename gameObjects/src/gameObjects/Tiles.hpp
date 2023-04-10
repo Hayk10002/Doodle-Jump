@@ -112,6 +112,7 @@ public:
 	 
 	void update(sf::Time dt) override;
 	void updateHeight(float current_height);
+	void updateHeight(sf::RenderWindow& window);
 	bool isDestroyed() const override;
 private:
 	void startExploding();
@@ -150,7 +151,6 @@ private:
 
 class ClusterTile : public Tile
 {
-	
 	std::deque<sf::Vector2f> m_offsets{ {0, 0} };
 	size_t m_current_offset_index{ 0 };
 	sf::Time m_existing_time{}, m_transition_start{}, m_transition_duration{sf::seconds(0.2)}, m_oscillating_duration{sf::seconds(0.3)};
@@ -193,6 +193,7 @@ private:
 
 };
 
+class Level;
 class LevelGenerator;
 class Tiles : public sf::Drawable
 {
@@ -209,6 +210,7 @@ public:
 
 private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+	friend class Level;
 	friend class LevelGenerator;
 
 };

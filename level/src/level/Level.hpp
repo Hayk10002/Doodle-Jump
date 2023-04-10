@@ -2,8 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <Thor/Input.hpp>
 
-#include <common/Resources.hpp>
-#include <common/Utils.hpp>
+#include <common/GameStuff.hpp>
 #include <drawables/ImageBackground.hpp>
 #include <drawables/Scene.hpp>
 #include <gameObjects/Doodle.hpp>
@@ -25,9 +24,12 @@ struct Level
 
 	Scene scene;
 
-	LevelGenerator level_generator;
+	LevelGeneratorNew level_generator{};
 
 	Level(sf::Vector2f doodle_pos, sf::RenderWindow& window);
 	void handleGameEvents(thor::ActionMap<UserActions>& action_map, sf::Time dt);
 	void update(sf::Time dt);
+	void addTile(Tile* tile);
+	void addItem(Item* item);
+	void addMonster(Monster* monster);
 };

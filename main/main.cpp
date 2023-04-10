@@ -14,6 +14,7 @@
 #include <common/Resources.hpp>
 #include <common/DebugImGui.hpp>
 #include <common/Utils.hpp>
+#include <common/GameStuff.hpp>
 #include <drawables/ImageBackground.hpp>
 #include <drawables/Scene.hpp>
 #include <level/Level.hpp>

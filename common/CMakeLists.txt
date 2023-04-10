@@ -9,6 +9,8 @@ add_library(${CommonTargetName} STATIC
             src/common/DebugImGui.cpp
             src/common/Utils.hpp
             src/common/Utils.cpp
+            src/common/GameStuff.hpp
+            src/common/GameStuff.cpp
 )
 
 target_link_libraries(${CommonTargetName}
