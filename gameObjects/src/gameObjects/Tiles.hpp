@@ -1,10 +1,12 @@
 #pragma once
 #include <string>
 #include <deque>
+#include <unordered_map>
 #include <functional>
 
 #include <SFML/Graphics.hpp>
 #include <Thor/Animations.hpp>
+#include <nlohmann/json.hpp>
 
 class Tiles;
 class Tile : public sf::Sprite
@@ -161,13 +163,18 @@ public:
 	class Id
 	{
 		size_t m_id;
-		std::shared_ptr<std::deque<ClusterTile*>> m_tiles;
+		std::shared_ptr<std::deque<ClusterTile*>> m_tiles{};
 		void addTile(ClusterTile* tile);
 		void removeTile(ClusterTile* tile);
 		inline static size_t counter{ 0 };
+		static std::unordered_map<size_t, std::shared_ptr<std::deque<ClusterTile*>>> id_tiles_map;
+		Id(size_t id);
 	public:
 		Id();
-
+		bool is_valid() const;
+		static Id New();
+		friend void to_json(nl::json& j, const Id& id);
+		friend void from_json(const nl::json& j, Id& id);
 		friend class ClusterTile;
 	};
 private:

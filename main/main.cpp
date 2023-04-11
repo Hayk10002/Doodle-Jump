@@ -9,6 +9,7 @@
 #include <Thor/Resources.hpp>
 #include <Thor/Math.hpp>
 #include <SelbaWard.hpp>
+#include <nlohmann/json.hpp>
 
 #include <DoodleJumpConfig.hpp>
 #include <common/Resources.hpp>
@@ -30,6 +31,7 @@
 
 int main()
 {
+
 	//setup the window
 	constexpr size_t WINDOW_WIDTH = 500;
 	sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, 800), "Doodle Jump");
@@ -45,6 +47,8 @@ int main()
 
 	//create the level
 	Level level({ 400, 400 }, window);
+	std::cout << nl::json(level).dump(4);
+
 
 	sf::Font default_font;
 	default_font.loadFromFile(RESOURCES_PATH"mistal.ttf");

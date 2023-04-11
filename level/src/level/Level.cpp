@@ -89,3 +89,23 @@ void Level::addMonster(Monster* monster)
 {
 	monsters.m_monsters.emplace_back(monster);
 }
+
+void to_json(nl::json& j, const Level& level)
+{
+	j["ib_texture_name"] = level.ib_texture_name;
+	j["scene"] = level.scene;
+	j["level_generator"] = level.level_generator;
+}
+
+void from_json(const nl::json& j, Level& level)
+{
+	if (j.contains("ib_texture_name"))
+	{
+		j.at("ib_texture_name").get_to(level.ib_texture_name);
+		level.ib.setTexture(&global_textures[level.ib_texture_name]);
+	}
+	if (j.contains("scene")) j.at("scene").get_to(level.scene);
+	if (j.contains("level_generator")) j.at("level_generator").get_to(level.level_generator);
+}
+
+

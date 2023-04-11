@@ -1,3 +1,4 @@
+// Generation
 #include "LevelGenerator.hpp"
 #include <ranges>
 #include <algorithm>
@@ -319,6 +320,16 @@ LevelGeneratorNew::Generator LevelGeneratorNew::Generator::promise_type::get_ret
 	return Generator{ handle_type::from_promise(*this) };
 }
 
+void to_json(nl::json& j, const LevelGeneratorNew::GenerationSettings& generation_settings)
+{
+	j["repeate_count"] = generation_settings.repeate_count;
+}
+
+void from_json(const nl::json& j, LevelGeneratorNew::GenerationSettings& generation_settings)
+{
+	if (j.contains("repeate_count")) generation_settings.repeate_count = j["repeate_count"];
+}
+
 LevelGeneratorNew::LevelGeneratorNew():
 	m_generator(getGenerator())
 {}
@@ -363,6 +374,18 @@ LevelGeneratorNew::Generator LevelGeneratorNew::getGenerator()
 		m_generated_height -= m_generation->generate(m_generated_height, m_generating_area.left, m_generating_area.left + m_generating_area.width);
 		co_await std::suspend_always{};
 	}
+}
+
+void to_json(nl::json& j, const LevelGeneratorNew& level_generator)
+{
+	j["generation_settings"] = level_generator.m_settings;
+	j["generation"] = level_generator.m_generation.get();
+}
+
+void from_json(const nl::json& j, LevelGeneratorNew& level_generator)
+{
+	if(j.contains("generation_settings")) level_generator.m_settings = j["generation_settings"];
+	if (j.contains("generation")) level_generator.m_generation = std::unique_ptr<Generation>{ j["generation"].get<Generation*>() };
 }
 
 
@@ -616,4 +639,514 @@ float PickOneGeneration::generateImpl(float generated_height, float left, float 
 	size_t pair_ind = utils::pickOneWithRelativeProbabilities(chances);
 	if (generations[pair_ind].generation) return generations[pair_ind].generation->generate(generated_height, left, right);
 	return 0.0f;
+}
+
+
+
+void Generation::to_json(nl::json& j) const
+{
+#define TEXT(x) #x
+	j["name"] = TEXT(Generation);
+#undef TEXT
+}
+
+void Generation::from_json(const nl::json& j)
+{
+}
+
+void TileGeneration::to_json(nl::json& j) const
+{
+	Generation::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(TileGeneration);
+#undef TEXT
+	j["position_returner"] = position_returner;
+	j["height_returner"] = height_returner;
+	j["item_generation"] = item_generation.get();
+}
+
+void TileGeneration::from_json(const nl::json& j)
+{
+	Generation::from_json(j);
+	if(j.contains("position_returner")) position_returner = j["position_returner"];
+	if(j.contains("height_returner")) height_returner = j["height_returner"];
+	if(j.contains("item_generation")) item_generation = std::unique_ptr<ItemGeneration>(j["item_generation"].get<ItemGeneration*>());
+}
+
+void ItemGeneration::to_json(nl::json& j) const
+{
+	Generation::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(ItemGeneration);
+#undef TEXT
+	j["tile_offset_returner"] = tile_offset_returner;
+}
+
+void ItemGeneration::from_json(const nl::json& j)
+{
+	Generation::from_json(j);
+	if (j.contains("tile_offset_returner")) tile_offset_returner = j["tile_offset_returner"];
+}
+
+void MonsterGeneration::to_json(nl::json& j) const
+{
+	Generation::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(MonsterGeneration);
+#undef TEXT
+	j["position_returner"] = position_returner;
+}
+
+void MonsterGeneration::from_json(const nl::json& j)
+{
+	Generation::from_json(j);
+	if (j.contains("position_returner")) position_returner = j["position_returner"];
+}
+
+void NormalTileGeneration::to_json(nl::json& j) const
+{
+	TileGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(NormalTileGeneration);
+#undef TEXT
+}
+
+void NormalTileGeneration::from_json(const nl::json& j)
+{
+	TileGeneration::from_json(j);
+}
+
+void HorizontalSlidingTileGeneration::to_json(nl::json& j) const
+{
+	TileGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(HorizontalSlidingTileGeneration);
+#undef TEXT
+	j["speed_returner"] = speed_returner;
+	j["left_returner"] = left_returner;
+	j["right_returner"] = right_returner;
+}
+
+void HorizontalSlidingTileGeneration::from_json(const nl::json& j)
+{
+	TileGeneration::from_json(j);
+	if (j.contains("speed_returner")) speed_returner = j["speed_returner"];
+	if (j.contains("left_returner")) left_returner = j["left_returner"];
+	if (j.contains("right_returner")) right_returner = j["right_returner"];
+}
+
+void VerticalSlidingTileGeneration::to_json(nl::json& j) const
+{
+	TileGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(VerticalSlidingTileGeneration);
+#undef TEXT
+	j["speed_returner"] = speed_returner;
+	j["top_returner"] = top_returner;
+	j["bottom_returner"] = bottom_returner;
+}
+
+void VerticalSlidingTileGeneration::from_json(const nl::json& j)
+{
+	TileGeneration::from_json(j);
+	if (j.contains("speed_returner")) speed_returner = j["speed_returner"];
+	if (j.contains("top_returner")) top_returner = j["top_returner"];
+	if (j.contains("bottom_returner")) bottom_returner = j["bottom_returner"];
+}
+
+void DecayedTileGeneration::to_json(nl::json& j) const
+{
+	TileGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(DecayedTileGeneration);
+#undef TEXT
+	j["speed_returner"] = speed_returner;
+	j["left_returner"] = left_returner;
+	j["right_returner"] = right_returner;
+}
+
+void DecayedTileGeneration::from_json(const nl::json& j)
+{
+	TileGeneration::from_json(j);
+	if (j.contains("speed_returner")) speed_returner = j["speed_returner"];
+	if (j.contains("left_returner")) left_returner = j["left_returner"];
+	if (j.contains("right_returner")) right_returner = j["right_returner"];
+}
+
+void BombTileGeneration::to_json(nl::json& j) const
+{
+	TileGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(BombTileGeneration);
+#undef TEXT
+	j["exploding_height_returner"] = exploding_height_returner;
+}
+
+void BombTileGeneration::from_json(const nl::json& j)
+{
+	TileGeneration::from_json(j);
+	if (j.contains("exploding_height_returner")) exploding_height_returner = j["exploding_height_returner"];
+}
+
+void OneTimeTileGeneration::to_json(nl::json& j) const
+{
+	TileGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(OneTimeTileGeneration);
+#undef TEXT
+}
+
+void OneTimeTileGeneration::from_json(const nl::json& j)
+{
+	TileGeneration::from_json(j);
+}
+
+void TeleportTileGeneration::to_json(nl::json& j) const
+{
+	TileGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(TeleportTileGeneration);
+#undef TEXT
+	j["offset_returners"] = nl::json::array();
+	for (auto& returner : offset_returners) j["offset_returners"].push_back(returner);
+}
+
+void TeleportTileGeneration::from_json(const nl::json& j)
+{
+	TileGeneration::from_json(j);
+	if (j.contains("offset_returners"))
+	{
+		offset_returners.clear();
+		for (size_t i = 0; i < j["offset_returners"].size(); i++) offset_returners.push_back(j["offset_returners"][i]);
+	}
+}
+
+void ClusterTileGeneration::to_json(nl::json& j) const
+{
+	TileGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(ClusterTileGeneration);
+#undef TEXT
+	j["offset_returners"] = nl::json::array();
+	for (auto& returner : offset_returners) j["offset_returners"].push_back(returner);
+	j["id"] = id;
+}
+
+void ClusterTileGeneration::from_json(const nl::json& j)
+{
+	TileGeneration::from_json(j);
+	if (j.contains("offset_returners"))
+	{
+		offset_returners.clear();
+		for (size_t i = 0; i < j["offset_returners"].size(); i++) offset_returners.push_back(j["offset_returners"][i]);
+	}
+	if (j.contains("id")) id = j["id"];
+}
+
+void SpringGeneration::to_json(nl::json& j) const
+{
+	ItemGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(SpringGeneration);
+#undef TEXT
+}
+
+void SpringGeneration::from_json(const nl::json& j)
+{
+	ItemGeneration::from_json(j);
+}
+
+void TrampolineGeneration::to_json(nl::json& j) const
+{
+	ItemGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(TrampolineGeneration);
+#undef TEXT
+}
+
+void TrampolineGeneration::from_json(const nl::json& j)
+{
+	ItemGeneration::from_json(j);
+}
+
+void PropellerHatGeneration::to_json(nl::json& j) const
+{
+	ItemGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(PropellerHatGeneration);
+#undef TEXT
+}
+
+void PropellerHatGeneration::from_json(const nl::json& j)
+{
+	ItemGeneration::from_json(j);
+}
+
+void JetpackGeneration::to_json(nl::json& j) const
+{
+	ItemGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(JetpackGeneration);
+#undef TEXT
+}
+
+void JetpackGeneration::from_json(const nl::json& j)
+{
+	ItemGeneration::from_json(j);
+}
+
+void SpringShoesGeneration::to_json(nl::json& j) const
+{
+	ItemGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(SpringShoesGeneration);
+#undef TEXT
+	j["max_use_count_returner"] = max_use_count_returner;
+}
+
+void SpringShoesGeneration::from_json(const nl::json& j)
+{
+	ItemGeneration::from_json(j);
+	if (j.contains("max_use_count_returner")) max_use_count_returner = j["max_use_count_returner"];
+}
+
+void BlueOneEyedMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(BlueOneEyedMonsterGeneration);
+#undef TEXT
+	j["speed_returner"] = speed_returner;
+	j["left_returner"] = left_returner;
+	j["right_returner"] = right_returner;
+}
+
+void BlueOneEyedMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+	if (j.contains("speed_returner")) speed_returner = j["speed_returner"];
+	if (j.contains("left_returner")) left_returner = j["left_returner"];
+	if (j.contains("right_returner")) right_returner = j["right_returner"];
+}
+
+void CamronMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(CamronMonsterGeneration);
+#undef TEXT
+}
+
+void CamronMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void PurpleSpiderMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(PurpleSpiderMonsterGeneration);
+#undef TEXT
+}
+
+void PurpleSpiderMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void LargeBlueMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(LargeBlueMonsterGeneration);
+#undef TEXT
+}
+
+void LargeBlueMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void UFOGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(UFOGeneration);
+#undef TEXT
+}
+
+void UFOGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void BlackHoleGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(BlackHoleGeneration);
+#undef TEXT
+}
+
+void BlackHoleGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void OvalGreenMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(OvalGreenMonsterGeneration);
+#undef TEXT
+}
+
+void OvalGreenMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void FlatGreenMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(FlatGreenMonsterGeneration);
+#undef TEXT
+}
+
+void FlatGreenMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void LargeGreenMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(LargeGreenMonsterGeneration);
+#undef TEXT
+}
+
+void LargeGreenMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void BlueWingedMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(BlueWingedMonsterGeneration);
+#undef TEXT
+}
+
+void BlueWingedMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+}
+
+void TheTerrifyingMonsterGeneration::to_json(nl::json& j) const
+{
+	MonsterGeneration::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(TheTerrifyingMonsterGeneration);
+#undef TEXT
+	j["speed_returner"] = speed_returner;
+	j["left_returner"] = left_returner;
+	j["right_returner"] = right_returner;
+}
+
+void TheTerrifyingMonsterGeneration::from_json(const nl::json& j)
+{
+	MonsterGeneration::from_json(j);
+	if (j.contains("speed_returner")) speed_returner = j["speed_returner"];
+	if (j.contains("left_returner")) left_returner = j["left_returner"];
+	if (j.contains("right_returner")) right_returner = j["right_returner"];
+}
+
+void GenerationWithChance::to_json(nl::json& j) const
+{
+	Generation::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(GenerationWithChance);
+#undef TEXT
+	j["generation"] = generation.get();
+	j["chance_returner"] = chance_returner;
+}
+
+void GenerationWithChance::from_json(const nl::json& j)
+{
+	Generation::from_json(j);
+	if (j.contains("generation")) generation = std::unique_ptr<Generation>(j["generation"].get<Generation*>());
+	if (j.contains("chance_returner")) chance_returner = j["chance_returner"];
+}
+
+void GroupGeneration::to_json(nl::json& j) const
+{
+	Generation::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(GroupGeneration);
+#undef TEXT
+	for (auto& generation : generations) j["generations"].push_back(generation.get());
+}
+
+void GroupGeneration::from_json(const nl::json& j)
+{
+	Generation::from_json(j);
+	if (j.contains("generations"))
+	{
+		generations.clear();
+		for (size_t i = 0; i < j["generations"].size(); i++) generations.push_back(std::unique_ptr<Generation>(j["generations"][i].get<Generation*>()));
+	}
+}
+
+void ConsecutiveGeneration::to_json(nl::json& j) const
+{
+	Generation::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(ConsecutiveGeneration);
+#undef TEXT
+	for (auto& generation : generations) j["generations"].push_back(generation.get());
+}
+
+void ConsecutiveGeneration::from_json(const nl::json& j)
+{
+	Generation::from_json(j);
+	if (j.contains("generations"))
+	{
+		generations.clear();
+		for (size_t i = 0; i < j["generations"].size(); i++) generations.push_back(std::unique_ptr<Generation>(j["generations"][i].get<Generation*>()));
+	}
+}
+
+void to_json(nl::json& j, const PickOneGeneration::ProbabilityGenerationPair& pair)
+{
+	j["relative_probility_returner"] = pair.relative_probability_returner;
+	j["generation"] = pair.generation.get();
+}
+
+void from_json(const nl::json& j, PickOneGeneration::ProbabilityGenerationPair& pair)
+{
+	if (j.contains("relative_probability_returner")) pair.relative_probability_returner = j["relative_probability_returner"];
+	if (j.contains("generation")) pair.generation = std::unique_ptr<Generation>(j["generation"].get<Generation*>());
+}
+
+void PickOneGeneration::to_json(nl::json& j) const
+{
+	Generation::to_json(j);
+#define TEXT(x) #x
+	j["name"] = TEXT(PickOneGeneration);
+#undef TEXT
+	for (auto& generation : generations) j["generations"].push_back(generation);
+}
+
+void PickOneGeneration::from_json(const nl::json& j)
+{
+	Generation::from_json(j);
+	if (j.contains("generations"))
+	{
+		generations.clear();
+		for (size_t i = 0; i < j["generations"].size(); i++) generations.push_back(j["generations"][i]);
+	}
 }

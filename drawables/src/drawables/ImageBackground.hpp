@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <SFML/Graphics.hpp>
+#include <nlohmann/json.hpp>
 
 //class that renders a background for some area filling everything with an image independently from rotation scale or position of the image
 //If you're going to use big zoom factor for your window's view, it'll be very good for your memory and framerate to use texture with repeating enabled (class can optimise its work)

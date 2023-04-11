@@ -403,21 +403,51 @@ void TeleportTile::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	target.draw(copy, states);
 }
 
+std::unordered_map<size_t, std::shared_ptr<std::deque<ClusterTile*>>> ClusterTile::Id::id_tiles_map{};
+
 void ClusterTile::Id::addTile(ClusterTile* tile)
 {
+	if (!is_valid()) return;
 	m_tiles->push_back(tile);
 }
 
 void ClusterTile::Id::removeTile(ClusterTile* tile)
 {
+	if (!is_valid()) return;
 	auto itr = std::find(m_tiles->begin(), m_tiles->end(), tile);
 	if (itr != m_tiles->end()) m_tiles->erase(itr);
 }
 
+ClusterTile::Id::Id(size_t id)
+{
+	if(id) if (!id_tiles_map.contains(id)) id_tiles_map[id] = std::shared_ptr<std::deque<ClusterTile*>>(new std::deque<ClusterTile*>);
+	m_id = id;
+	if(id) m_tiles = id_tiles_map[id];
+}
+
 ClusterTile::Id::Id():
-	m_id(counter++),
-	m_tiles(new std::deque<ClusterTile*>{})
+	Id(0)
 {}
+
+bool ClusterTile::Id::is_valid() const
+{
+	return m_id;
+}
+
+ClusterTile::Id ClusterTile::Id::New()
+{
+	return Id(++counter);
+}
+
+void to_json(nl::json& j, const ClusterTile::Id& id)
+{
+	j["id"] = id.m_id;
+}
+
+void from_json(const nl::json& j, ClusterTile::Id& id)
+{
+	if (j.contains("id")) id = ClusterTile::Id(j["id"].get<size_t>());
+}
 
 ClusterTile::ClusterTile(Id id):
 	Tile(&global_textures["tiles"]),

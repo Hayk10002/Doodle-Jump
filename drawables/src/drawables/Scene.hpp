@@ -5,7 +5,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <Thor/Resources.hpp>
-
+#include <nlohmann/json.hpp>
 
 class SimpleView
 {
@@ -46,12 +46,13 @@ class ViewScrolling
 protected:
 
 	static SimpleView lerp(const SimpleView& start, const SimpleView& end, float alpha);
-	sf::Time m_duration;
-	std::string m_name = "None";
-	ViewScrolling(sf::Time duration);
+	sf::Time m_duration{};
+	ViewScrolling(sf::Time duration = sf::Time::Zero);
 public:
 	virtual SimpleView getView(sf::Time passed_time, const SimpleView& start_view, const SimpleView& end_view) const = 0;
-	std::string getName() const;
+	virtual void to_json(nl::json& j) const;
+	virtual void from_json(const nl::json& j);
+	void setDuration(sf::Time duration);
 	sf::Time getDuration() const;
 };
 
@@ -171,7 +172,6 @@ public:
 	{
 		m_scrolling_type_ptr = std::make_unique<T>(type);
 	}
-	std::string getScrollingTypeName() const;
 
 	void updateObjects(sf::Time dt);
 	void updateScrolling();
@@ -199,24 +199,61 @@ private:
 	bool isMyObject(Object obj) const;
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+
+	friend void to_json(nl::json& j, const Scene& scene);
+	friend void from_json(const nl::json& j, Scene& scene);
 };
+
 
 struct InstantScrolling : ViewScrolling
 {
-	InstantScrolling();
 	SimpleView getView(sf::Time passed_time, const SimpleView& start_view, const SimpleView& end_view) const override;
+	void to_json(nl::json& j) const override;
+	void from_json(const nl::json& j) override {};
 };
 
 struct LinearScrolling : ViewScrolling
 {
-	LinearScrolling(sf::Time duration);
+	LinearScrolling(sf::Time duration = sf::Time::Zero);
 	SimpleView getView(sf::Time passed_time, const SimpleView& start_view, const SimpleView& end_view) const override;
+	void to_json(nl::json& j) const override;
+	void from_json(const nl::json& j) override;
 };
 
 struct ExponentialScrolling : ViewScrolling
 {
-	ExponentialScrolling(sf::Time duration, float power);
+	ExponentialScrolling(sf::Time duration = sf::Time::Zero, float power = 0);
 	SimpleView getView(sf::Time passed_time, const SimpleView& start_view, const SimpleView& end_view) const override;
+	void setPower(float power);
+	float getPower() const;
+	void to_json(nl::json& j) const override;
+	void from_json(const nl::json& j) override;
 private:
-	float m_polynolial_power{ 3 }, m_exponent_base, m_turning_point, m_polynomial_scale;
+	float m_power{}, m_polynolial_power{ 3 }, m_exponent_base, m_turning_point, m_polynomial_scale;
 };
+
+template <std::derived_from<ViewScrolling> T>
+T* getScrollingPointerFromName(std::string name)
+{
+#define RETURN_FOR_TYPE(x) if constexpr (std::derived_from<x, T>) if(name == #x) return new x;
+	RETURN_FOR_TYPE(InstantScrolling);
+	RETURN_FOR_TYPE(LinearScrolling);
+	RETURN_FOR_TYPE(ExponentialScrolling);
+#undef RETURN_FOR_TYPE
+	return nullptr;
+}
+
+void to_json(nl::json& j, std::derived_from<ViewScrolling> auto* scrolling)
+{
+	scrolling->to_json(j);
+}
+
+template <std::derived_from<ViewScrolling> T>
+void from_json(const nl::json& j, T*& scrolling)
+{
+#define TEXT(x) #x
+	scrolling = getScrollingPointerFromName<T>(j.contains("name") ? j["name"] : TEXT(InstantScrolling));
+#undef TEXT
+	scrolling->from_json(j);
+}
+

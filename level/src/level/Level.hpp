@@ -1,6 +1,9 @@
 #pragma once
+#include <string>
+
 #include <SFML/Graphics.hpp>
 #include <Thor/Input.hpp>
+#include <nlohmann/json.hpp>
 
 #include <common/GameStuff.hpp>
 #include <drawables/ImageBackground.hpp>
@@ -15,6 +18,7 @@ struct Level
 {
 	sf::RenderWindow& window;
 
+	std::string ib_texture_name = "background";
 	ImageBackground ib;
 
 	Doodle doodle;
@@ -32,4 +36,8 @@ struct Level
 	void addTile(Tile* tile);
 	void addItem(Item* item);
 	void addMonster(Monster* monster);
+
+	friend void to_json(nl::json& j, const Level& level);
+	friend void from_json(const nl::json& j, Level& level);
 };
+

@@ -118,9 +118,19 @@ sf::View SimpleView::asSFMLView() const
 	return res;
 }
 
-std::string ViewScrolling::getName() const
+void ViewScrolling::to_json(nl::json& j) const
 {
-    return m_name;
+	j["duration"] = m_duration.asSeconds();
+}
+
+void ViewScrolling::from_json(const nl::json& j)
+{
+	if (j.contains("duration")) m_duration = sf::seconds(j["duration"]);
+}
+
+void ViewScrolling::setDuration(sf::Time duration)
+{
+	m_duration = duration;
 }
 
 sf::Time ViewScrolling::getDuration() const
@@ -162,7 +172,7 @@ SimpleView ViewScrolling::lerp(const SimpleView& start, const SimpleView& end, f
 	return view;
 }
 
-ViewScrolling::ViewScrolling(sf::Time duration):
+ViewScrolling::ViewScrolling(sf::Time duration) :
 	m_duration(duration)
 {}
 
@@ -406,11 +416,6 @@ void Scene::rotate(float angle, bool instant)
 	if (instant) m_view = m_view_destination;
 }
 
-std::string Scene::getScrollingTypeName() const
-{
-	return m_scrolling_type_ptr->getName();
-}
-
 void Scene::updateObjects(sf::Time dt)
 {
 	for (int i = 0; i < m_update_order.size(); i++)
@@ -476,16 +481,19 @@ void Scene::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	}
 }
 
-InstantScrolling::InstantScrolling() :
-	ViewScrolling(sf::Time::Zero)
-{}
-
 SimpleView InstantScrolling::getView(sf::Time passed_time, const SimpleView & start_view, const SimpleView & end_view) const
 {
 	return end_view;
 }
 
-LinearScrolling::LinearScrolling(sf::Time duration):
+void InstantScrolling::to_json(nl::json& j) const
+{
+#define TEXT(x) #x
+	j["name"] = TEXT(InstantScrolling);
+#undef TEXT
+}
+
+LinearScrolling::LinearScrolling(sf::Time duration) :
 	ViewScrolling(duration)
 {}
 
@@ -494,12 +502,23 @@ SimpleView LinearScrolling::getView(sf::Time passed_time, const SimpleView & sta
 	return lerp(start_view, end_view, passed_time / m_duration);
 }
 
+void LinearScrolling::to_json(nl::json& j) const
+{
+#define TEXT(x) #x
+	j["name"] = TEXT(LinearScrolling);
+#undef TEXT
+	ViewScrolling::to_json(j);
+}
+
+void LinearScrolling::from_json(const nl::json& j)
+{
+	ViewScrolling::from_json(j);
+}
+
 ExponentialScrolling::ExponentialScrolling(sf::Time duration, float power) :
 	ViewScrolling(duration)
 {
-	m_exponent_base = std::pow(std::numbers::e_v<float>, m_polynolial_power + power);
-	m_turning_point = -m_polynolial_power / std::log(m_exponent_base) + 1;
-	m_polynomial_scale = std::pow(m_exponent_base, -m_turning_point) / std::pow(m_turning_point - 1, m_polynolial_power);
+	setPower(power);
 }
 
 SimpleView ExponentialScrolling::getView(sf::Time passed_time, const SimpleView & start_view, const SimpleView & end_view) const
@@ -510,4 +529,40 @@ SimpleView ExponentialScrolling::getView(sf::Time passed_time, const SimpleView 
 	return lerp(start_view, end_view, alpha);
 }
 
+void ExponentialScrolling::setPower(float power)
+{
+	m_power = power;
+	m_exponent_base = std::pow(std::numbers::e_v<float>, m_polynolial_power + power);
+	m_turning_point = -m_polynolial_power / std::log(m_exponent_base) + 1;
+	m_polynomial_scale = std::pow(m_exponent_base, -m_turning_point) / std::pow(m_turning_point - 1, m_polynolial_power);
+}
 
+float ExponentialScrolling::getPower() const
+{
+	return m_power;
+}
+
+void ExponentialScrolling::to_json(nl::json& j) const
+{
+#define TEXT(x) #x
+	j["name"] = TEXT(ExponentialScrolling);
+#undef TEXT
+	ViewScrolling::to_json(j);
+	j["power"] = m_power;
+}
+
+void ExponentialScrolling::from_json(const nl::json& j)
+{
+	ViewScrolling::from_json(j);
+	if (j.contains("power")) setPower(j["power"]);
+}
+
+void to_json(nl::json& j, const Scene& scene)
+{
+	j["scrolling_type"] = scene.m_scrolling_type_ptr.get();
+}
+
+void from_json(const nl::json& j, Scene& scene)
+{
+	if (j.contains("scrolling_type")) scene.m_scrolling_type_ptr = std::unique_ptr<ViewScrolling>{ j["scrolling_type"].get<ViewScrolling*>() };
+}
