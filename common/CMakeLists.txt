@@ -11,12 +11,17 @@ add_library(${CommonTargetName} STATIC
             src/common/Utils.cpp
             src/common/GameStuff.hpp
             src/common/GameStuff.cpp
+            src/common/Returners.hpp
+            src/common/Returners.cpp
 )
+
+target_compile_options(${CommonTargetName} PUBLIC /bigobj)
 
 target_link_libraries(${CommonTargetName}
         PUBLIC
             AllLibraries
             config
+            level
 )  
 
 target_include_directories(${CommonTargetName}

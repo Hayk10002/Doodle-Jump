@@ -1,10 +1,13 @@
 #include "Level.hpp"
+
+#include <fstream>
 #include <common/Resources.hpp>
 #include <common/Utils.hpp>
+#include <DoodleJumpConfig.hpp>
 
-Level::Level(sf::Vector2f doodle_pos, sf::RenderWindow& window):
+Level::Level(sf::RenderWindow& window) :
 	window(window),
-	ib(&global_textures["background"], &window),
+	ib(&global_textures[ib_texture_name], &window),
 	doodle(doodle_pos),
 	tiles(window),
 	items(window),
@@ -24,21 +27,6 @@ Level::Level(sf::Vector2f doodle_pos, sf::RenderWindow& window):
 	scene.setScrollingType(InstantScrolling());
 
 	level_generator.setLevelForGeneration(this);
-	level_generator.setGenerationSettings({ .repeate_count = -1 });
-	NormalTileGeneration gen;
-	gen.position_returner = thor::Distributions::rect({ 250.f, 0.f }, { 200.f, 0.f });
-	gen.height_returner = thor::Distributions::uniform(50.f, 130.f);
-	DecayedTileGeneration dec_gen;
-	dec_gen.position_returner = thor::Distributions::rect({ 250.f, 0.f }, { 200.f, 0.f });
-	dec_gen.height_returner = thor::Distributions::uniform(50.f, 70.f);
-	GenerationWithChance ch_gen;
-	ch_gen.chance_returner = utils::constant_returner(0.25f);
-	ch_gen.generation = std::make_unique<DecayedTileGeneration>(std::move(dec_gen));
-	ConsecutiveGeneration cons_gen;
-	cons_gen.generations.push_back(std::make_unique<NormalTileGeneration>(std::move(gen)));
-	cons_gen.generations.push_back(std::make_unique<GenerationWithChance>(std::move(ch_gen)));
-	level_generator.setGeneration(std::move(cons_gen));
-
 }
 
 void Level::handleGameEvents(thor::ActionMap<UserActions>& action_map, sf::Time dt)
@@ -90,9 +78,24 @@ void Level::addMonster(Monster* monster)
 	monsters.m_monsters.emplace_back(monster);
 }
 
+void Level::saveToFile(std::string path)
+{
+	std::ofstream fout(path);
+	fout << nl::json(*this);
+}
+
+void Level::loadFromFile(std::string path)
+{
+	std::ifstream fin(path);
+	nl::json j;
+	fin >> j;
+	j.get_to(*this);
+}
+
 void to_json(nl::json& j, const Level& level)
 {
 	j["ib_texture_name"] = level.ib_texture_name;
+	j["doodle_position"] = level.doodle_pos;
 	j["scene"] = level.scene;
 	j["level_generator"] = level.level_generator;
 }
@@ -103,6 +106,11 @@ void from_json(const nl::json& j, Level& level)
 	{
 		j.at("ib_texture_name").get_to(level.ib_texture_name);
 		level.ib.setTexture(&global_textures[level.ib_texture_name]);
+	}
+	if (j.contains("doodle_position"))
+	{
+		j.at("doodle_position").get_to(level.doodle_pos);
+		level.doodle.setPosition(level.doodle_pos);
 	}
 	if (j.contains("scene")) j.at("scene").get_to(level.scene);
 	if (j.contains("level_generator")) j.at("level_generator").get_to(level.level_generator);

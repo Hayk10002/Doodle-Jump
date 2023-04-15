@@ -20,7 +20,8 @@ struct Level
 
 	std::string ib_texture_name = "background";
 	ImageBackground ib;
-
+	
+	sf::Vector2f doodle_pos{250, 400};
 	Doodle doodle;
 	Tiles tiles;
 	Items items;
@@ -28,14 +29,17 @@ struct Level
 
 	Scene scene;
 
-	LevelGeneratorNew level_generator{};
+	LevelGenerator level_generator{};
 
-	Level(sf::Vector2f doodle_pos, sf::RenderWindow& window);
+	Level(sf::RenderWindow& window);
 	void handleGameEvents(thor::ActionMap<UserActions>& action_map, sf::Time dt);
 	void update(sf::Time dt);
 	void addTile(Tile* tile);
 	void addItem(Item* item);
 	void addMonster(Monster* monster);
+
+	void saveToFile(std::string path);
+	void loadFromFile(std::string path);
 
 	friend void to_json(nl::json& j, const Level& level);
 	friend void from_json(const nl::json& j, Level& level);

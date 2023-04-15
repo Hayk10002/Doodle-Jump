@@ -11,162 +11,10 @@
 #include <gameObjects/Items.hpp>
 #include <gameObjects/Monsters.hpp>
 #include <common/Utils.hpp>
-using namespace utils;
+#include <common/Returners.hpp>
 
 
 class Level;
-class LevelGenerator
-{
-	struct Generator 
-	{
-		struct promise_type;
-		using handle_type = std::coroutine_handle<promise_type>;
-
-		handle_type coro;
-		Generator(handle_type h) : coro(h) {}
-
-		~Generator();
-		Generator(Generator&& oth) noexcept;
-		Generator& operator=(Generator&& oth) noexcept;
-
-		bool resume();
-
-		struct promise_type 
-		{
-			promise_type() = default;
-			promise_type(promise_type&& oth) = default;
-			promise_type& operator=(promise_type&& oth) = default;
-			~promise_type() = default;
-
-			std::suspend_always initial_suspend() { return{}; }
-			std::suspend_always final_suspend() noexcept { return{}; }
-			Generator get_return_object();
-			void return_void() {};
-			void unhandled_exception() { throw std::current_exception(); }
-			
-		};
-
-	};
-
-public:
-	LevelGenerator(Level* level);
-	void update();
-
-private:
-	Tiles* m_tiles;
-	Items* m_items;
-	Monsters* m_monsters;
-	sf::RenderWindow* m_window;
-	Generator m_generator;
-	float m_generated_height{};
-	sf::FloatRect m_generating_area{};
-	
-	sf::FloatRect getGeneratingArea();
-	Generator getGenerator();
-
-	struct NormalGenerationStats
-	{
-		sf::Vector2f tile_minimum_interval{ 100, 20 };
-		sf::Vector2f tile_maximum_interval{ 450, 200 };
-		float minimum_density_inverse = 7;
-		float density_inverse_deviation = 2;
-		float minimum_density_height = 20000;
-		float getTileDensityInverseFromGeneratedHeight(float generated_height);
-		float getCurrentTileDensityInverse(float generated_height, float left, float right);
-		
-		float horizontal_tile_minimum_height = 3000;
-		float all_horizontal_tile_height = 50000;
-		float getHorizontalTileChanceFromGeneratedHeight(float generated_height);
-		float horizontal_tile_maximum_speed_height = 100000;
-		thor::Distribution<float> horizontal_tile_speed_distribution{ thor::Distributions::uniform(200.f, 300.f) };
-		float horizontal_tile_minimum_speed_multiplier = 0.5;
-		float getHorizontalTileSpeedMultiplierFromGeneratedHeight(float generated_height);
-
-		float decayed_tile_minimum_height = 0;
-		float decayed_tile_maximum_chance_height = 20000;
-		float decayed_tile_maximum_chance = 0.5;
-		float getDecayedTileChanceFromGeneratedHeight(float generated_height);
-		float decayed_moving_tile_minimum_height = 3000;
-		float decayed_all_moving_tile_height = 50000;
-		float getDecayedMovingTileChanceFromGeneratedHeight(float generated_height);
-		float decayed_moving_tile_maximum_speed_height = 100000;
-		thor::Distribution<float> decayed_moving_tile_speed_distribution{ thor::Distributions::uniform(200.f, 300.f) };
-		float decayed_moving_tile_minimum_speed_multiplier = 0.5;
-		float getDecayedMovingTileSpeedMultiplierFromGeneratedHeight(float generated_height);
-
-		float spring_maximum_chance = 0.05;
-		float spring_minimum_chance = 0.04;
-		float spring_minimum_chance_height = 20000;
-		float getSpringChanceFromGeneratedHeight(float generated_height);
-
-		float spring_shoes_chance = 0.001;
-		thor::Distribution<int> spring_shoes_max_use_count_distribution{ thor::Distributions::uniform(4, 6) };
-
-		float trampoline_maximum_chance = 0.04;
-		float trampoline_minimum_chance = 0.00001;
-		float trampoline_minimum_chance_height = 20000;
-		float getTrampolineChanceFromGeneratedHeight(float generated_height);
-		
-		float propeller_hat_maximum_chance = 0.01;
-		float propeller_hat_minimum_chance = 0.01;
-		float propeller_hat_minimum_chance_height = 50000;
-		float getPropellerHatChanceFromGeneratedHeight(float generated_height);
-
-		float jetpack_maximum_chance = 0.005;
-		float jetpack_minimum_chance = 0.005;
-		float jetpack_minimum_chance_height = 50000;
-		float getJetpackChanceFromGeneratedHeight(float generated_height);
-
-		
-
-	} m_gen_stats;
-
-	struct CustonGenerationStats
-	{
-		std::string name;
-		float start_chance;
-		float end_chance;
-		float start_height;
-		float end_height;
-		std::function<void(float, float, float)> generator;
-		float getChanceFromGeneratedHeight(float generated_height);
-	};
-
-	std::deque<CustonGenerationStats> m_custom_gen_stats
-	{
-		{
-			.name{"normal monster"},
-			.start_chance = 0.01,
-			.end_chance = 0.02,
-			.start_height = 5000,
-			.end_height = 30000,
-			.generator{[](float generated_height, float left, float right)
-			{
-				size_t type = thor::Distributions::uniform(1, 4)();
-				switch (type)
-				{
-				case 1:
-					break;
-				}
-			}}
-		}
-	};
-
-
-	Tile* generateNormalTiles(float generated_height, float left, float right, float& tile_density_inv);
-	Tile* generateHorizontalTile(float generated_height, float left, float right, float& tile_density_inv);
-	void generateDecayedTile(float generated_height, float left, float right, float tile_density_inv);
-	void generateSpringOnTile(Tile* tile);
-	void generateSpringShoesOnTile(Tile* tile);
-	void generateTrampolineOnTile(Tile* tile);
-	void generatePropellerHatOnTile(Tile* tile);
-	void generateJetpackOnTile(Tile* tile);
-	
-	
-	void generateNormalGeneration(float& generated_height, float left, float right);
-};
-
-
 class Generation
 {
 	inline static Level* level = nullptr;
@@ -183,7 +31,7 @@ public:
 	virtual void from_json(const nl::json& j);
 };
 
-class LevelGeneratorNew
+class LevelGenerator
 {
 	struct Generator
 	{
@@ -232,7 +80,7 @@ private:
 	sf::FloatRect m_generating_area{};
 
 public:
-	LevelGeneratorNew();
+	LevelGenerator();
 	void update();
 	template <std::derived_from<Generation> T>
 	void setGeneration(T&& gen)
@@ -240,6 +88,7 @@ public:
 		m_generation = std::make_unique<T>(std::forward<T>(gen));
 	}
 	void setGenerationSettings(GenerationSettings settings);
+	float getGeneratedHeight();
 
 	static void setLevelForGeneration(Level* level_ptr);
 	static Level* getLevelForGeneration();
@@ -248,16 +97,16 @@ private:
 	sf::FloatRect getGeneratingArea();
 	Generator getGenerator();
 
-	friend void to_json(nl::json& j, const LevelGeneratorNew& level_generator);
-	friend void from_json(const nl::json& j, LevelGeneratorNew& level_generator);
+	friend void to_json(nl::json& j, const LevelGenerator& level_generator);
+	friend void from_json(const nl::json& j, LevelGenerator& level_generator);
 };
 
 class ItemGeneration;
 class TileGeneration : public Generation
 {
 public:
-	Returner<sf::Vector2f> position_returner = def_returner<sf::Vector2f>;
-	Returner<float> height_returner = def_returner<float>;
+	std::unique_ptr<Returner<Position>> position_returner{ new Returner<Position>{} };
+	std::unique_ptr<Returner<Height>> height_returner{new Returner<Height>{}};
 	std::unique_ptr<ItemGeneration> item_generation{};
 
 	virtual void to_json(nl::json& j) const override;
@@ -272,7 +121,7 @@ class ItemGeneration : public Generation
 {
 public:
 	Tile* tile{};
-	Returner<float> tile_offset_returner = def_returner<float>;
+	std::unique_ptr<Returner<XOffset>> tile_offset_returner{new Returner<XOffset>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -285,7 +134,7 @@ protected:
 class MonsterGeneration : public Generation
 {
 public:
-	Returner<sf::Vector2f> position_returner = def_returner<sf::Vector2f>;
+	std::unique_ptr<Returner<Position>> position_returner{new Returner<Position>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -310,9 +159,9 @@ protected:
 class HorizontalSlidingTileGeneration : public TileGeneration
 {
 public:
-	Returner<float> speed_returner = def_returner<float>;
-	Returner<float> left_returner = def_returner<float>;
-	Returner<float> right_returner = def_returner<float>;
+	std::unique_ptr<Returner<XSpeed>> speed_returner{new Returner<XSpeed>{}};
+	std::unique_ptr<Returner<XBoundary>> left_returner{new Returner<XBoundary>{}};
+	std::unique_ptr<Returner<XBoundary>> right_returner{new Returner<XBoundary>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -324,9 +173,9 @@ protected:
 class VerticalSlidingTileGeneration : public TileGeneration
 {
 public:
-	Returner<float> speed_returner = def_returner<float>;
-	Returner<float> top_returner = def_returner<float>;
-	Returner<float> bottom_returner = def_returner<float>;
+	std::unique_ptr<Returner<YSpeed>> speed_returner{new Returner<YSpeed>{}};
+	std::unique_ptr<Returner<YBoundary>> top_returner{new Returner<YBoundary>{}};
+	std::unique_ptr<Returner<YBoundary>> bottom_returner{new Returner<YBoundary>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -338,9 +187,9 @@ protected:
 class DecayedTileGeneration : public TileGeneration
 {
 public:
-	Returner<float> speed_returner = def_returner<float>;
-	Returner<float> left_returner = def_returner<float>;
-	Returner<float> right_returner = def_returner<float>;
+	std::unique_ptr<Returner<XSpeed>> speed_returner{new Returner<XSpeed>{}};
+	std::unique_ptr<Returner<XBoundary>> left_returner{new Returner<XBoundary>{}};
+	std::unique_ptr<Returner<XBoundary>> right_returner{new Returner<XBoundary>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -352,7 +201,7 @@ protected:
 class BombTileGeneration : public TileGeneration
 {
 public:
-	Returner<float> exploding_height_returner = def_returner<float>;
+	std::unique_ptr<Returner<Height>> exploding_height_returner{new Returner<Height>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -374,7 +223,7 @@ protected:
 class TeleportTileGeneration : public TileGeneration
 {
 public:
-	std::deque<Returner<sf::Vector2f>> offset_returners{};
+	std::deque<std::unique_ptr<Returner<Offset>>> offset_returners{};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -386,7 +235,7 @@ protected:
 class ClusterTileGeneration : public TileGeneration
 {
 public:
-	std::deque<Returner<sf::Vector2f>> offset_returners{};
+	std::deque<std::unique_ptr<Returner<Offset>>> offset_returners{};
 	ClusterTile::Id id{};
 
 	virtual void to_json(nl::json& j) const override;
@@ -441,7 +290,7 @@ protected:
 class SpringShoesGeneration : public ItemGeneration
 {
 public:
-	Returner<size_t> max_use_count_returner = def_returner<size_t>;
+	std::unique_ptr<Returner<Count>> max_use_count_returner{new Returner<Count>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -455,9 +304,9 @@ public:
 class BlueOneEyedMonsterGeneration : public MonsterGeneration
 {
 public:
-	Returner<float> speed_returner = def_returner<float>;
-	Returner<float> left_returner = def_returner<float>;
-	Returner<float> right_returner = def_returner<float>;
+	std::unique_ptr<Returner<XSpeed>> speed_returner{new Returner<XSpeed>{}};
+	std::unique_ptr<Returner<XBoundary>> left_returner{new Returner<XBoundary>{}};
+	std::unique_ptr<Returner<XBoundary>> right_returner{new Returner<XBoundary>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -560,9 +409,9 @@ protected:
 class TheTerrifyingMonsterGeneration : public MonsterGeneration
 {
 public:
-	Returner<sf::Vector2f> speed_returner = def_returner<sf::Vector2f>;
-	Returner<float> left_returner = def_returner<float>;
-	Returner<float> right_returner = def_returner<float>;
+	std::unique_ptr<Returner<Speed>> speed_returner{new Returner<Speed>{}};
+	std::unique_ptr<Returner<XBoundary>> left_returner{new Returner<XBoundary>{}};
+	std::unique_ptr<Returner<XBoundary>> right_returner{new Returner<XBoundary>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -578,7 +427,7 @@ class GenerationWithChance : public Generation
 {
 public:
 	std::unique_ptr<Generation> generation{};
-	Returner<float> chance_returner = def_returner<float>;
+	std::unique_ptr<Returner<Chance>> chance_returner{new Returner<Chance>{}};
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
@@ -616,7 +465,7 @@ class PickOneGeneration : public Generation
 public:
 	struct ProbabilityGenerationPair
 	{
-		Returner<float> relative_probability_returner = def_returner<float>;
+		std::unique_ptr<Returner<RelativeProbability>> relative_probability_returner{new Returner<RelativeProbability>{}};
 		std::unique_ptr<Generation> generation{};
 		friend void to_json(nl::json& j, const ProbabilityGenerationPair& pair);
 		friend void from_json(const nl::json& j, ProbabilityGenerationPair& pair);
@@ -631,8 +480,11 @@ protected:
 };
 
 template <std::derived_from<Generation> T>
-T* getGenerationPointerFromName(std::string name)
+T* getGenerationPointerFromJson(const nl::json& j)
 {
+#define TEXT(x) #x
+	std::string name = (j.contains("name") ? j["name"] : TEXT(Generation));
+#undef TEXT
 #define RETURN_FOR_TYPE(x) if constexpr (std::derived_from<x, T>) if(name == #x) return new x;
 	RETURN_FOR_TYPE(Generation);
 	RETURN_FOR_TYPE(TileGeneration);
@@ -671,22 +523,28 @@ T* getGenerationPointerFromName(std::string name)
 	return nullptr;
 }
 
-void to_json(nl::json& j, std::derived_from<Generation> auto* generation)
+namespace nlohmann
 {
-	if (generation) generation->to_json(j);
-	else j = nullptr;
-}
-
-template<std::derived_from<Generation> T>
-void from_json(const nl::json& j, T*& generation)
-{
-	if (j.is_null())
+	template<std::derived_from<Generation> T>
+	struct adl_serializer<std::unique_ptr<T>>
 	{
-		generation = nullptr;
-		return;
-	}
+		static void to_json(nl::json& j, const std::unique_ptr<T>& ptr) 
+		{
+			if (ptr) ptr->to_json(j);
+			else j = nullptr;
+		};
+
+		static void from_json(const nl::json& j, std::unique_ptr<T>& ptr) 
+		{
+			if (j.is_null())
+			{
+				ptr = std::unique_ptr<T>{};
+				return;
+			}
 #define TEXT(x) #x
-	generation = getGenerationPointerFromName<T>(j.contains("name") ? j["name"] : TEXT(Generation));
+			ptr = std::unique_ptr<T>(getGenerationPointerFromJson<T>(j));
 #undef TEXT
-	generation->from_json(j);
+			ptr->from_json(j);
+		};
+	};
 }

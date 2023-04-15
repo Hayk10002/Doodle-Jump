@@ -31,7 +31,6 @@
 
 int main()
 {
-
 	//setup the window
 	constexpr size_t WINDOW_WIDTH = 500;
 	sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, 800), "Doodle Jump");
@@ -46,10 +45,9 @@ int main()
 	init_resources();
 
 	//create the level
-	Level level({ 400, 400 }, window);
-	std::cout << nl::json(level).dump(4);
-
-
+	Level level(window);
+	level.loadFromFile(RESOURCES_PATH"level.json");
+	
 	sf::Font default_font;
 	default_font.loadFromFile(RESOURCES_PATH"mistal.ttf");
 	sf::Text points_text("", default_font);
@@ -155,5 +153,7 @@ int main()
 
 	ImGui::SFML::Shutdown();
 	release_resources();
+
+	level.saveToFile(RESOURCES_PATH"level.json");
 	return 0;
 }
