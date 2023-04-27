@@ -1,1 +1,45 @@
-{"doodle_position":{"x":250.0,"y":400.0},"ib_texture_name":"background","level_generator":{"generation":{"height_returner":{"name":"ConstantReturner","value":100.0},"item_generation":null,"left_returner":{"name":"ConstantReturner","value":0.0},"name":"HorizontalSlidingTileGeneration","position_returner":{"name":"ConstantReturner","value":{"x":250.0,"y":0.0}},"right_returner":{"name":"ConstantReturner","value":500.0},"speed_returner":{"first_returner":{"name":"ConstantReturner","value":0.019999999552965164},"first_type":"XSpeed","name":"ProductReturner","second_returner":{"name":"GeneratedHeightReturner"},"second_type":"Height"}},"generation_settings":{"repeate_count":-1}},"scene":{"scrolling_type":{"name":"InstantScrolling"}}}
+{
+    "doodle_position": {
+        "x": 250.0,
+        "y": 400.0
+    },
+    "ib_texture_name": "background",
+    "level_generator": {
+        "generation": {
+            "generations": [
+                {
+                    "generation": null,
+                    "relative_probility_returner": {
+                        "first_returner": {
+                            "name": "class ConstantReturner<6>",
+                            "value": 456.0
+                        },
+                        "name": "class ProductReturner<16,6,13>",
+                        "second_returner": {
+                            "max_value": 789.0,
+                            "min_value": 456.0,
+                            "name": "class UniformDistributionReturner<13>"
+                        }
+                    }
+                },
+                {
+                    "generation": null,
+                    "relative_probility_returner": null
+                },
+                {
+                    "generation": null,
+                    "relative_probility_returner": null
+                }
+            ],
+            "name": "PickOneGeneration"
+        },
+        "generation_settings": {
+            "repeate_count": 1
+        }
+    },
+    "scene": {
+        "scrolling_type": {
+            "name": "InstantScrolling"
+        }
+    }
+}

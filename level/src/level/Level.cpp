@@ -81,7 +81,7 @@ void Level::addMonster(Monster* monster)
 void Level::saveToFile(std::string path)
 {
 	std::ofstream fout(path);
-	fout << nl::json(*this);
+	fout << std::setw(4) << nl::json(*this);
 }
 
 void Level::loadFromFile(std::string path)

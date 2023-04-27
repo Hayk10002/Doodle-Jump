@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include <SFML/imgui-SFML.h>
 
 #include <Thor/Input.hpp>
@@ -46,33 +47,16 @@ int main()
 
 	//create the level
 	Level level(window);
-	level.loadFromFile(RESOURCES_PATH"level.json");
+	std::string save_file_name{ "level.json" };
 	
-	sf::Font default_font;
-	default_font.loadFromFile(RESOURCES_PATH"mistal.ttf");
-	sf::Text points_text("", default_font);
-	points_text.setFillColor(sf::Color::Black);
-	points_text.setOutlineColor(sf::Color::White);
-	points_text.setOutlineThickness(2);
-
 	//setup the user actions
-	thor::ActionMap<UserActions> action_map;
-	action_map[UserActions::Close] = thor::Action(sf::Event::Closed);
-	action_map[UserActions::Resize] = thor::Action(sf::Event::Resized);
-	action_map[UserActions::Left] = thor::Action(sf::Keyboard::A) || thor::Action(sf::Keyboard::Left);
-	action_map[UserActions::Right] = thor::Action(sf::Keyboard::D) || thor::Action(sf::Keyboard::Right);
-	action_map[UserActions::Shoot] = thor::Action(sf::Mouse::Left, thor::Action::PressOnce);
-	action_map[UserActions::Die] = thor::Action(sf::Keyboard::BackSpace, thor::Action::PressOnce);
-	action_map[UserActions::Ressurect] = thor::Action(sf::Keyboard::Enter, thor::Action::PressOnce);
-	action_map[UserActions::BreakPoint] = thor::Action(sf::Keyboard::LShift) && thor::Action(sf::Keyboard::Escape);
-
+	thor::ActionMap<std::string> action_map;
+	action_map["close"] = thor::Action(sf::Event::Closed);
+	action_map["resize"] = thor::Action(sf::Event::Resized);
 	//frame clock
 	size_t frame_count = 0;
 	sf::Clock deltaClock;
 	sf::Time full_time, dt;
-	float game_speed{ 1 };
-
-	float dragging_speed = 100;
 
 	while (window.isOpen())
 	{
@@ -99,52 +83,54 @@ int main()
 				action_map.pushEvent(event);
 				break;
 			}
+
+			if (event.type == sf::Event::MouseWheelScrolled)
+			{
+				level.scene.scrollUp(100.f * event.mouseWheelScroll.delta);
+			}
 		}
 
 		//updating
 
 		frame_count++;
-		full_time += (dt = deltaClock.restart() * game_speed);
+		full_time += (dt = deltaClock.restart());
 
 		
 		ImGui::SFML::Update(window, dt);
+		ImGui::ShowDemoWindow();
 		ImGui::Begin("Info");
 		ImGui::Text("Frame count: %d", frame_count);
 		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
-		ImGui::DragFloat("Drag speed", &dragging_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
-		ImGui::DragFloat("Game speed", &game_speed, 1, 0.f, 10000.f, "%.3f", ImGuiSliderFlags_Logarithmic);
-		sf::Vector2f position = level.doodle.getPosition();
-		ImGui::DragFloat2("Position", (float*)&position, dragging_speed);
-		level.doodle.setPosition(position);
-		ImGui::Text("Area: {%f, %f, %f, %f}", level.doodle.getArea().left, level.doodle.getArea().top, level.doodle.getArea().width, level.doodle.getArea().height);
-		ImGui::Text("Is doodle dead: %d", level.doodle.isDead());
-		//if (ImGui::IsWindowFocused())  dt = sf::Time::Zero;
+		level.level_generator.toImGui();
+		ImGui::InputText("Save file", &save_file_name);
+		if (ImGui::Button("Load from the save file")) level.loadFromFile(RESOURCES_PATH + save_file_name);
+		if (ImGui::Button("Save to the save file")) level.saveToFile(RESOURCES_PATH + save_file_name);
+		if (ImGui::TreeNode("Hello"))
+		{
+			ImGui::Text("World?");
+			ImGui::TreePop();
+		}
+		
+		
 		ImGui::End();
 
-		if (action_map.isActive(UserActions::Close))
+		if (action_map.isActive("close"))
 			window.close();
-		if (action_map.isActive(UserActions::Resize))
+		if (action_map.isActive("resize"))
 		{
 			window.setSize({ WINDOW_WIDTH, window.getSize().y });
 			sf::Vector2f scale = { (float)window_prev_size.x / window.getSize().x, (float)window_prev_size.y / window.getSize().y };
 			window_prev_size = { window.getSize().x, window.getSize().y };
 			level.scene.zoom(scale, true);
 		}
-		if (action_map.isActive(UserActions::BreakPoint))
-		{
-			int debug = 0;
-		}
 
-		level.handleGameEvents(action_map, dt);
-		level.update(dt);
+		action_map.update(window);
+		level.ib.update();
+		level.scene.updateScrolling();
 
-		points_text.setPosition(window.mapPixelToCoords({ 10, 10 }));
-		points_text.setString(std::to_string(int(-window.mapPixelToCoords({ 0, 0 }).y)));
-	
 		//drawing
 		window.clear();
-		window.draw(level.scene);
-		window.draw(points_text);
+		window.draw(level.ib);
 		ImGui::SFML::Render(window);
 		window.display();
 	}

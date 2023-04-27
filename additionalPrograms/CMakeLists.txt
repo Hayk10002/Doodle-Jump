@@ -1,1 +1,2 @@
 add_subdirectory(DoodleParamsGetter)
+add_subdirectory(LevelEditor)

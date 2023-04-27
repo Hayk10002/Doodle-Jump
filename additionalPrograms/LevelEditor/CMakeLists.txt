@@ -1,8 +1,8 @@
-set(DoodleParamsGetterTargetName DoodleParamsGetter)
+set(LevelEditorTargetName LevelEditor)
 
-add_executable(${DoodleParamsGetterTargetName} EXCLUDE_FROM_ALL main.cpp)
+add_executable(${LevelEditorTargetName} main.cpp)
 
-target_link_libraries(${DoodleParamsGetterTargetName} 
+target_link_libraries(${LevelEditorTargetName} 
         PRIVATE
             config
             AllLibraries
@@ -12,7 +12,7 @@ target_link_libraries(${DoodleParamsGetterTargetName}
             common
 )
 
-set_target_properties(${DoodleParamsGetterTargetName} PROPERTIES FOLDER "additionalPrograms")
+set_target_properties(${LevelEditorTargetName} PROPERTIES FOLDER "additionalPrograms")
 
 if(USE_SFML)
     include("${AllLibrariesFolderPath}/${SFMLFolderName}/CopySFMLDlls.cmake")

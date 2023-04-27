@@ -173,6 +173,7 @@ public:
 		Id();
 		bool is_valid() const;
 		static Id New();
+		void toImGui();
 		friend void to_json(nl::json& j, const Id& id);
 		friend void from_json(const nl::json& j, Id& id);
 		friend class ClusterTile;

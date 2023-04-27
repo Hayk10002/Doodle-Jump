@@ -1,5 +1,6 @@
 #include "Tiles.hpp"
 
+#include <imgui.h>
 #include <Thor/Math.hpp>
 
 #include <common/Resources.hpp>
@@ -437,6 +438,17 @@ bool ClusterTile::Id::is_valid() const
 ClusterTile::Id ClusterTile::Id::New()
 {
 	return Id(++counter);
+}
+
+void ClusterTile::Id::toImGui()
+{
+	if (is_valid())
+	{
+		ImGui::Text(std::to_string(m_id).c_str());
+		return;
+	}
+	ImGui::Text("None"); ImGui::SameLine();
+	if (ImGui::SmallButton("New")) *this = New();
 }
 
 void to_json(nl::json& j, const ClusterTile::Id& id)

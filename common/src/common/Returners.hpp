@@ -2,6 +2,7 @@
 #include <concepts>
 #include <string>
 
+#include <imgui.h>
 #include <nlohmann/json.hpp>
 #include <SFML/System/Vector2.hpp>
 #include <Thor/Math/Distributions.hpp>
@@ -27,7 +28,7 @@ enum ReturnType
 	YBoundary,
 	Chance,
 	RelativeProbability,
-	Count
+	ReturnerTypesCount
 };
 
 constexpr const char* ReturnType_to_text[] = 
@@ -49,7 +50,7 @@ constexpr const char* ReturnType_to_text[] =
 	TEXT(YBoundary),
 	TEXT(Chance),
 	TEXT(RelativeProbability),
-	TEXT(Count)
+	TEXT(ReturnerTypesCount)
 };
 
 namespace
@@ -71,19 +72,36 @@ namespace
 	template<> struct ToValueType<YBoundary> { using type = float; };
 	template<> struct ToValueType<Chance> { using type = float; };
 	template<> struct ToValueType<RelativeProbability> { using type = float; };
-	template<> struct ToValueType<Count> { using type = unsigned int; };
+	template<> struct ToValueType<ReturnerTypesCount> { using type = void; };
 	template<ReturnType type> using ValueType = ToValueType<type>::type;
 
 	template<class T, class... Ts>
 	concept one_of_types = (std::same_as<T, Ts> || ...);
 }
 
+void toImGui(float& val);
+void toImGui(int& val);
+void toImGui(size_t& val);
+void toImGui(sf::Vector2f& val);
+
+template<class T>
+const char* getClassName()
+{
+	return typeid(std::decay_t<T>).name();
+}
+
 template<ReturnType RT>
 class Returner
 {
+	size_t ImGui_id{ 0 };
+	inline static size_t ImGui_id_counter{ 0 };
 public:
 	using ValT = ValueType<RT>;
 	constexpr static inline ReturnType RetType = RT;
+	Returner() :
+		ImGui_id{ ++ImGui_id_counter }
+	{}
+
 	ValT getValue() const
 	{
 		return get();
@@ -91,11 +109,25 @@ public:
 
 	virtual void to_json(nl::json& j) const
 	{
-		j["name"] = TEXT(Returner);
+		j["name"] = getClassName<decltype(*this)>();
 	}
 
 	virtual void from_json(const nl::json& j)
 	{
+	}
+	void toImGui()
+	{
+		static size_t id = 0;
+		if (ImGui::TreeNodeEx(std::format("{} (type: {})##{}", getName(), ReturnType_to_text[RT], ImGui_id).c_str(), ImGuiTreeNodeFlags_SpanAvailWidth))
+		{
+			toImGuiImpl();
+			ImGui::TreePop();
+		}
+	}
+
+	virtual std::string getName() const
+	{
+		return TEXT(Returner);
 	}
 
 protected:
@@ -103,7 +135,12 @@ protected:
 	{
 		return ValT{};
 	}
+	virtual void toImGuiImpl() {}
 };
+
+template<class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
+void toImGui(std::unique_ptr<RetT>& returner, const std::string& format);
 
 template <ReturnType RT>
 class ConstantReturner : public Returner<RT>
@@ -116,7 +153,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["name"] = TEXT(ConstantReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["value"] = val;
 	}
 
@@ -126,10 +163,20 @@ public:
 		if (j.contains("value")) j["value"].get_to(val);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(ConstantReturner);
+	}
+
 protected:
 	virtual ValT get() const override 
 	{ 
 		return val;
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		ImGui::Text("Value:"); ImGui::SameLine(); ::toImGui(val);
 	}
 };
 
@@ -148,7 +195,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["name"] = TEXT(UniformDistributionReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["min_value"] = min_val;
 		j["max_value"] = max_val;
 	}
@@ -160,10 +207,21 @@ public:
 		if (j.contains("max_value")) j["max_value"].get_to(max_val);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(UniformDistributionReturner);
+	}
+
 protected:
 	virtual ValT get() const override 
 	{ 
 		return thor::Distributions::uniform(min_val, max_val)();
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		ImGui::Text("Min:"); ImGui::SameLine(); ::toImGui(min_val);
+		ImGui::Text("Max:"); ImGui::SameLine(); ::toImGui(max_val);
 	}
 };
 
@@ -182,7 +240,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["name"] = TEXT(RectDistributionReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["center"] = center;
 		j["half_size"] = half_size;
 	}
@@ -194,10 +252,21 @@ public:
 		if (j.contains("half_size")) j["half_size"].get_to(half_size);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(RectDistributionReturner);
+	}
+	
 protected:
 	virtual ValT get() const override
 	{
 		return thor::Distributions::rect(center, half_size)();
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		ImGui::Text("Center:"); ImGui::SameLine(); ::toImGui(center);
+		ImGui::Text("Half size:"); ImGui::SameLine(); ::toImGui(half_size);
 	}
 };
 
@@ -217,7 +286,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["name"] = TEXT(CircleDistributionReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["center"] = center;
 		j["radius"] = radius;
 	}
@@ -229,10 +298,21 @@ public:
 		if (j.contains("radius")) j["radius"].get_to(radius);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(CircleDistributionReturner);
+	}
+
 protected:
 	virtual ValT get() const override
 	{
 		return thor::Distributions::circle(center, radius)();
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		ImGui::Text("Center:"); ImGui::SameLine(); ::toImGui(center);
+		ImGui::Text("Radius:"); ImGui::SameLine(); ::toImGui(radius);
 	}
 };
 
@@ -252,7 +332,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["name"] = TEXT(DeflectDistributionReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["direction"] = direction;
 		j["max_rotation"] = max_rotation;
 	}
@@ -264,10 +344,21 @@ public:
 		if (j.contains("max_rotation")) j["max_rotation"].get_to(max_rotation);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(DeflectDistributionReturner);
+	}
+
 protected:
 	virtual ValT get() const override
 	{
 		return thor::Distributions::deflect(direction, max_rotation)();
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		ImGui::Text("Direction:"); ImGui::SameLine(); ::toImGui(direction);
+		ImGui::Text("Max rotation:"); ImGui::SameLine(); ::toImGui(max_rotation);
 	}
 };
 
@@ -281,11 +372,16 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["name"] = TEXT(GeneratedHeightReturner);
+		j["name"] = getClassName<decltype(*this)>();
 	}
 
 	virtual void from_json(const nl::json& j) override
 	{}
+
+	virtual std::string getName() const override
+	{
+		return TEXT(GeneratedHeightReturner);
+	}
 
 protected:
 	virtual ValT get() const override;
@@ -305,7 +401,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["name"] = TEXT(NegativeReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["returner"] = ret;
 	}
 
@@ -315,10 +411,20 @@ public:
 		if (j.contains("returner")) j["returner"].get_to(ret);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(NegativeReturner);
+	}
+
 protected:
 	virtual ValT get() const override
 	{
 		return -ret->getValue();
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		::toImGui<Returner<RT>>(ret, "Value:");
 	}
 };
 
@@ -338,9 +444,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["first_type"] = ReturnType_to_text[FRT];
-		j["second_type"] = ReturnType_to_text[SRT];
-		j["name"] = TEXT(SumReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["first_returner"] = f_ret;
 		j["second_returner"] = s_ret;
 	}
@@ -352,10 +456,21 @@ public:
 		if (j.contains("second_returner")) j["second_returner"].get_to(s_ret);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(SumReturner);
+	}
+
 protected:
 	virtual ValT get() const override
 	{
 		return f_ret->getValue() + s_ret->getValue();
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		::toImGui<Returner<FRT>>(f_ret, "First:");
+		::toImGui<Returner<SRT>>(s_ret, "Second:");
 	}
 };
 
@@ -375,9 +490,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["first_type"] = ReturnType_to_text[FRT];
-		j["second_type"] = ReturnType_to_text[SRT];
-		j["name"] = TEXT(DifferenceReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["first_returner"] = f_ret;
 		j["second_returner"] = s_ret;
 	}
@@ -389,10 +502,21 @@ public:
 		if (j.contains("second_returner")) j["second_returner"].get_to(s_ret);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(DifferenceReturner);
+	}
+
 protected:
 	virtual ValT get() const override
 	{
 		return f_ret->getValue() - s_ret->getValue();
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		::toImGui<Returner<FRT>>(f_ret, "First:");
+		::toImGui<Returner<SRT>>(s_ret, "Second:");
 	}
 };
 
@@ -412,9 +536,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["first_type"] = ReturnType_to_text[FRT];
-		j["second_type"] = ReturnType_to_text[SRT];
-		j["name"] = TEXT(ProductReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["first_returner"] = f_ret;
 		j["second_returner"] = s_ret;
 	}
@@ -426,10 +548,21 @@ public:
 		if (j.contains("second_returner")) j["second_returner"].get_to(s_ret);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(ProductReturner);
+	}
+
 protected:
 	virtual ValT get() const override
 	{
 		return f_ret->getValue() * s_ret->getValue();
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		::toImGui<Returner<FRT>>(f_ret, "First:");
+		::toImGui<Returner<SRT>>(s_ret, "Second:");
 	}
 };
 
@@ -449,9 +582,7 @@ public:
 	virtual void to_json(nl::json& j) const override
 	{
 		Returner<RT>::to_json(j);
-		j["first_type"] = ReturnType_to_text[FRT];
-		j["second_type"] = ReturnType_to_text[SRT];
-		j["name"] = TEXT(QuotientReturner);
+		j["name"] = getClassName<decltype(*this)>();
 		j["first_returner"] = f_ret;
 		j["second_returner"] = s_ret;
 	}
@@ -463,12 +594,25 @@ public:
 		if (j.contains("second_returner")) j["second_returner"].get_to(s_ret);
 	}
 
+	virtual std::string getName() const override
+	{
+		return TEXT(QuotientReturner);
+	}
+
 protected:
 	virtual ValT get() const override
 	{
 		return f_ret->getValue() / s_ret->getValue();
 	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		::toImGui<Returner<FRT>>(f_ret, "First:");
+		::toImGui<Returner<SRT>>(s_ret, "Second:");
+	}
 };
+
+#if 0
 
 template <class RetT>
 	requires std::derived_from<RetT, Returner<RetT::RetType>>
@@ -512,7 +656,7 @@ RetT* getReturnerPointerFromJson(const nl::json& j)
 	CHECK(second_type, YBoundary) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, YBoundary)\
 	CHECK(second_type, Chance) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Chance)\
 	CHECK(second_type, RelativeProbability) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, RelativeProbability)\
-	CHECK(second_type, Count) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Count)\
+	CHECK(second_type, ReturnerTypesCount) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, ReturnerTypesCount)\
 }
 
 #define RETURN_FOR_NON_PRIM_TYPE(x) \
@@ -534,7 +678,7 @@ RetT* getReturnerPointerFromJson(const nl::json& j)
 	CHECK(first_type, YBoundary) RETURN_FOR_NON_PRIM_TYPE_W1T(x, YBoundary)\
 	CHECK(first_type, Chance) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Chance)\
 	CHECK(first_type, RelativeProbability) RETURN_FOR_NON_PRIM_TYPE_W1T(x, RelativeProbability)\
-	CHECK(first_type, Count) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Count)\
+	CHECK(first_type, ReturnerTypesCount) RETURN_FOR_NON_PRIM_TYPE_W1T(x, ReturnerTypesCount)\
 }
 
 	CHECK(name, SumReturner) RETURN_FOR_NON_PRIM_TYPE(SumReturner)
@@ -547,7 +691,80 @@ RetT* getReturnerPointerFromJson(const nl::json& j)
 #undef RETURN_FOR_NON_PRIM_TYPE
 #undef CHECK
 	return nullptr;
+	
 }
+
+#endif
+template <class RetT, template<ReturnType> class T>
+RetT* returnForPrimType(const std::string& name) 
+{
+	constexpr bool requirement = requires { {std::derived_from<T<RetT::RetType>, RetT>}; };
+	if constexpr (!requirement) return nullptr;
+	else
+	{
+		if (getClassName<T<RetT::RetType>>() != name) return nullptr;
+		return new T<RetT::RetType>;
+	}
+};
+
+template <class RetT, template<ReturnType> class ...Ts>
+RetT* returnForPrimTypes(const std::string& name)
+{
+	return nonZeroPtr<RetT>({ returnForPrimType<RetT, Ts>(name)... });
+};
+
+template<class RetT, template<ReturnType, ReturnType, ReturnType> class T, ReturnType t1, ReturnType t2>
+RetT* returnForNonPrimTypeW2T(const std::string& name)
+{
+	constexpr bool requirement = requires { {std::derived_from<T<RetT::RetType, t1, t2>, RetT>}; };
+	if constexpr (!requirement) return nullptr;
+	else
+	{
+		if (getClassName<T<RetT::RetType, t1, t2>>() != name) return nullptr;
+		return new T<RetT::RetType, t1, t2>;
+	}
+};
+
+template<class RetT, template<ReturnType, ReturnType, ReturnType> class T, ReturnType t1, int ...types>
+RetT* returnForNonPrimTypeW1T(const std::string& name, std::integer_sequence<int, types...>)
+{
+	return nonZeroPtr<RetT>({returnForNonPrimTypeW2T<RetT, T, t1, ReturnType(types)>(name)...});
+};
+
+template<class RetT, template<ReturnType, ReturnType, ReturnType> class T, int ...types1, int ...types2>
+RetT* returnForNonPrimType(const std::string& name, std::integer_sequence<int, types1...>, std::integer_sequence<int, types2...> i2)
+{
+	return nonZeroPtr<RetT>({returnForNonPrimTypeW1T<RetT, T, ReturnType(types1)>(name, i2)...});
+};
+
+template<class RetT, template<ReturnType, ReturnType, ReturnType> class ...Ts, int ...types1, int ...types2>
+RetT* returnForNonPrimTypes(const std::string& name, std::integer_sequence<int, types1...> i1, std::integer_sequence<int, types2...> i2)
+{
+	return nonZeroPtr<RetT>({returnForNonPrimType<RetT, Ts>(name, i1, i2)...});
+};
+
+
+template <class RetT>
+RetT* nonZeroPtr(std::initializer_list<RetT*> l)
+{
+	for (auto ptr : l) if (ptr) return ptr;
+	return nullptr;
+}
+
+template <class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
+RetT* getReturnerPointerFromJsonTempl(const nl::json& j)
+{
+	if (!j.contains("name")) return nullptr;
+	std::string name = j["name"];
+	
+	return nonZeroPtr<RetT>(
+		{
+			returnForPrimTypes<RetT, Returner, ConstantReturner, UniformDistributionReturner, RectDistributionReturner, CircleDistributionReturner, DeflectDistributionReturner, GeneratedHeightReturner, NegativeReturner > (name),
+			returnForNonPrimTypes<RetT, SumReturner, DifferenceReturner, ProductReturner, QuotientReturner > (name, std::make_integer_sequence<int, ReturnerTypesCount>(), std::make_integer_sequence<int, ReturnerTypesCount>())
+		});
+}
+
 
 namespace nlohmann
 {
@@ -568,9 +785,7 @@ namespace nlohmann
 				ptr = std::unique_ptr<RetT>{};
 				return;
 			}
-#define TEXT(x) #x
-			ptr = std::unique_ptr<RetT>(getReturnerPointerFromJson<RetT>(j));
-#undef TEXT
+			ptr = std::unique_ptr<RetT>(getReturnerPointerFromJsonTempl<RetT>(j));
 			ptr->from_json(j);
 		};
 	};
@@ -590,4 +805,89 @@ namespace nlohmann
 			if (j.contains("y")) j["y"].get_to(vec.y);
 		}
 	};
+}
+
+template<class RetT>
+struct ImGuiButtonForNonPrimTypeGenerator
+{
+
+	template <template<ReturnType, ReturnType, ReturnType> class T, ReturnType t1, ReturnType t2>
+	void ImGuiButtonForNonPrimTypeW2T()
+	{
+		constexpr bool requirement = requires { {std::derived_from<T<RetT::RetType, t1, t2>, RetT>}; };
+		if constexpr (!requirement) return;
+		else tree_map[ReturnType_to_text[t1]][ReturnType_to_text[t2]] = std::unique_ptr<RetT>(new T<RetT::RetType, t1, t2>);
+	}
+
+	template <template<ReturnType, ReturnType, ReturnType> class T, ReturnType t1, int ...types>
+	void ImGuiButtonForNonPrimTypeW1T(std::integer_sequence<int, types...>)
+	{
+		(ImGuiButtonForNonPrimTypeW2T<T, t1, ReturnType(types)>(), ...);
+	}
+
+	template <template<ReturnType, ReturnType, ReturnType> class T, int ...types1, int... types2>
+	void ImGuiButtonForNonPrimType(std::unique_ptr<RetT>& returner, std::integer_sequence<int, types1...>, std::integer_sequence<int, types2...> i2)
+	{
+		(ImGuiButtonForNonPrimTypeW1T<T, ReturnType(types1)>(i2), ...);
+		for (auto& pair : tree_map) if (ImGui::TreeNodeEx(std::format("First type: {}", pair.first).c_str(), ImGuiTreeNodeFlags_SpanAvailWidth))
+		{
+			for (auto& second_pair : pair.second) if (ImGui::SmallButton(std::format("Second type: {}", second_pair.first).c_str())) returner = std::move(second_pair.second);
+			ImGui::TreePop();
+		}
+	}
+
+	std::map<std::string, std::map<std::string, std::unique_ptr<RetT>>> tree_map{};
+
+};
+
+template<class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
+void toImGui(std::unique_ptr<RetT>& returner, const std::string& format)
+{
+	ImGui::Text(format.c_str());
+	if (returner)
+	{
+		if (ImGui::BeginPopupContextItem(std::format("For reseting##{}", (uintptr_t)&returner).c_str()))
+		{
+			if (ImGui::SmallButton("Reset to None")) returner.reset();
+			ImGui::EndPopup();
+		}
+	}
+	else
+	{
+		if (ImGui::BeginPopupContextItem(std::format("For new returner##{}", (uintptr_t)&returner).c_str()))
+		{
+			if (ImGui::SmallButton("Create new")) ImGui::OpenPopup("Choose a type");
+			if (ImGui::BeginPopup("Choose a type"))
+			{
+#define IMGUI_BUTTON_FOR_PRIM_TYPE(x) if constexpr( requires { {std::derived_from<x<RetT::RetType>, RetT>}; }) if(ImGui::SmallButton(#x)) returner = std::unique_ptr<RetT>(new x<RetT::RetType>);
+				IMGUI_BUTTON_FOR_PRIM_TYPE(Returner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(ConstantReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(UniformDistributionReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(RectDistributionReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(CircleDistributionReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(DeflectDistributionReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(GeneratedHeightReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(NegativeReturner)
+#undef IMGUI_BUTTON_FOR_PRIM_TYPE
+#define IMGUI_TREE_FOR_NON_PRIM_TYPE(x)\
+if(ImGui::TreeNode(#x))\
+{\
+	ImGuiButtonForNonPrimTypeGenerator<RetT>{}.ImGuiButtonForNonPrimType<x>(returner, std::make_integer_sequence<int, ReturnerTypesCount>(), std::make_integer_sequence<int, ReturnerTypesCount>());\
+	ImGui::TreePop();\
+}
+
+				IMGUI_TREE_FOR_NON_PRIM_TYPE(SumReturner)
+				IMGUI_TREE_FOR_NON_PRIM_TYPE(DifferenceReturner)
+				IMGUI_TREE_FOR_NON_PRIM_TYPE(ProductReturner)
+				IMGUI_TREE_FOR_NON_PRIM_TYPE(QuotientReturner)
+#undef IMGUI_TREE_FOR_NON_PRIM_TYPE
+				ImGui::EndPopup();
+			}
+			ImGui::EndPopup();
+		}
+	}
+	ImGui::SameLine();
+	if (returner) returner->toImGui();
+	else ImGui::Text(std::format("None (type: {})", ReturnType_to_text[RetT::RetType]).c_str());
 }
