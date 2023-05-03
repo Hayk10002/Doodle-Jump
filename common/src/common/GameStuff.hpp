@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 enum class UserActions
 {
@@ -12,3 +13,5 @@ enum class UserActions
 	Ressurect,
 	BreakPoint
 };
+
+inline std::string doodle_jump_clipboard{};

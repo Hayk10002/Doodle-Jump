@@ -4,8 +4,11 @@
 
 #include <imgui.h>
 #include <nlohmann/json.hpp>
-#include <SFML/System/Vector2.hpp>
+#include <SFML/Graphics.hpp>
 #include <Thor/Math/Distributions.hpp>
+
+#include <common/GameStuff.hpp>
+#include <common/Utils.hpp>
 
 #define TEXT(x) #x
 
@@ -98,9 +101,7 @@ class Returner
 public:
 	using ValT = ValueType<RT>;
 	constexpr static inline ReturnType RetType = RT;
-	Returner() :
-		ImGui_id{ ++ImGui_id_counter }
-	{}
+	Returner() : ImGui_id{ ++ImGui_id_counter } {}
 
 	ValT getValue() const
 	{
@@ -112,9 +113,7 @@ public:
 		j["name"] = getClassName<decltype(*this)>();
 	}
 
-	virtual void from_json(const nl::json& j)
-	{
-	}
+	virtual void from_json(const nl::json& j) {}
 	void toImGui()
 	{
 		static size_t id = 0;
@@ -124,6 +123,7 @@ public:
 			ImGui::TreePop();
 		}
 	}
+
 
 	virtual std::string getName() const
 	{
@@ -163,10 +163,7 @@ public:
 		if (j.contains("value")) j["value"].get_to(val);
 	}
 
-	virtual std::string getName() const override
-	{
-		return TEXT(ConstantReturner);
-	}
+	virtual std::string getName() const override { return TEXT(ConstantReturner); }
 
 protected:
 	virtual ValT get() const override 
@@ -419,12 +416,165 @@ public:
 protected:
 	virtual ValT get() const override
 	{
-		return -ret->getValue();
+		return ret ? -ret->getValue() : ValT{};
 	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<RT>>(ret, "Value:");
+	}
+};
+
+template <ReturnType RT>
+	requires requires { { std::declval<ValueType<RT>>() < std::declval<ValueType<RT>>() } -> std::same_as<bool>; }
+class MinReturner : public Returner<RT>
+{
+public:
+	using typename Returner<RT>::ValT;
+	std::unique_ptr<Returner<RT>> f_ret;
+	std::unique_ptr<Returner<RT>> s_ret;
+	MinReturner(std::unique_ptr<Returner<RT>>&& f_ret = std::unique_ptr<Returner<RT>>{}, std::unique_ptr<Returner<RT>>&& s_ret = std::unique_ptr<Returner<RT>>{}) :
+		f_ret(std::move(f_ret)),
+		s_ret(std::move(s_ret))
+	{}
+
+	virtual void to_json(nl::json& j) const override
+	{
+		Returner<RT>::to_json(j);
+		j["name"] = getClassName<decltype(*this)>();
+		j["first_returner"] = f_ret;
+		j["second_returner"] = s_ret;
+	}
+
+	virtual void from_json(const nl::json& j) override
+	{
+		Returner<RT>::from_json(j);
+		if (j.contains("first_returner")) j["first_returner"].get_to(f_ret);
+		if (j.contains("second_returner")) j["second_returner"].get_to(s_ret);
+	}
+
+	virtual std::string getName() const override
+	{
+		return TEXT(MinReturner);
+	}
+
+protected:
+	virtual ValT get() const override
+	{
+		ValT f_val = f_ret ? f_ret->getValue() : ValT{};
+		ValT s_val = s_ret ? s_ret->getValue() : ValT{};
+		return (f_val < s_val) ? f_val : s_val;
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		::toImGui<Returner<RT>>(f_ret, "First:");
+		::toImGui<Returner<RT>>(s_ret, "Second:");
+	}
+};
+
+template <ReturnType RT>
+	requires requires { { std::declval<ValueType<RT>>() < std::declval<ValueType<RT>>() } -> std::same_as<bool>; }
+class MaxReturner : public Returner<RT>
+{
+public:
+	using typename Returner<RT>::ValT;
+	std::unique_ptr<Returner<RT>> f_ret;
+	std::unique_ptr<Returner<RT>> s_ret;
+	MaxReturner(std::unique_ptr<Returner<RT>>&& f_ret = std::unique_ptr<Returner<RT>>{}, std::unique_ptr<Returner<RT>>&& s_ret = std::unique_ptr<Returner<RT>>{}) :
+		f_ret(std::move(f_ret)),
+		s_ret(std::move(s_ret))
+	{}
+
+	virtual void to_json(nl::json& j) const override
+	{
+		Returner<RT>::to_json(j);
+		j["name"] = getClassName<decltype(*this)>();
+		j["first_returner"] = f_ret;
+		j["second_returner"] = s_ret;
+	}
+
+	virtual void from_json(const nl::json& j) override
+	{
+		Returner<RT>::from_json(j);
+		if (j.contains("first_returner")) j["first_returner"].get_to(f_ret);
+		if (j.contains("second_returner")) j["second_returner"].get_to(s_ret);
+	}
+
+	virtual std::string getName() const override
+	{
+		return TEXT(MaxReturner);
+	}
+
+protected:
+	virtual ValT get() const override
+	{
+		ValT f_val = f_ret ? f_ret->getValue() : ValT{};
+		ValT s_val = s_ret ? s_ret->getValue() : ValT{};
+		return (f_val < s_val) ? s_val : f_val;
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		::toImGui<Returner<RT>>(f_ret, "First:");
+		::toImGui<Returner<RT>>(s_ret, "Second:");
+	}
+};
+
+template <ReturnType RT>
+	requires requires { { std::declval<ValueType<RT>>() < std::declval<ValueType<RT>>() } -> std::same_as<bool>; }
+class ClampReturner : public Returner<RT>
+{
+public:
+	using typename Returner<RT>::ValT;
+	std::unique_ptr<Returner<RT>> ret;
+	std::unique_ptr<Returner<RT>> min_ret;
+	std::unique_ptr<Returner<RT>> max_ret;
+	ClampReturner(std::unique_ptr<Returner<RT>>&& ret = std::unique_ptr<Returner<RT>>{}, std::unique_ptr<Returner<RT>>&& min_ret = std::unique_ptr<Returner<RT>>{}, std::unique_ptr<Returner<RT>>&& max_ret = std::unique_ptr<Returner<RT>>{}):
+		ret(std::move(ret)),
+		min_ret(std::move(min_ret)),
+		max_ret(std::move(max_ret))
+	{}
+
+	virtual void to_json(nl::json& j) const override
+	{
+		Returner<RT>::to_json(j);
+		j["name"] = getClassName<decltype(*this)>();
+		j["returner"] = ret;
+		j["min_returner"] = min_ret;
+		j["max_returner"] = max_ret;
+	}
+
+	virtual void from_json(const nl::json& j) override
+	{
+		Returner<RT>::from_json(j);
+		if (j.contains("returner")) j["returner"].get_to(ret);
+		if (j.contains("min_returner")) j["min_returner"].get_to(min_ret);
+		if (j.contains("max_returner")) j["max_returner"].get_to(max_ret);
+	}
+
+	virtual std::string getName() const override
+	{
+		return TEXT(ClampReturner);
+	}
+
+protected:
+	virtual ValT get() const override
+	{
+		ValT val = ret ? ret->getValue() : ValT{};
+		ValT min_val = min_ret ? min_ret->getValue() : ValT{};
+		ValT max_val = max_ret ? max_ret->getValue() : ValT{};
+		if (max_val < min_val) return val;
+		if (val < min_val) return min_val;
+		if (max_val < val) return max_val;
+		return val;
+	}
+	virtual void toImGuiImpl() override
+	{
+		Returner<RT>::toImGuiImpl();
+		::toImGui<Returner<RT>>(ret, "Value:");
+		::toImGui<Returner<RT>>(min_ret, "Min value:");
+		::toImGui<Returner<RT>>(max_ret, "Max value:");
 	}
 };
 
@@ -464,7 +614,7 @@ public:
 protected:
 	virtual ValT get() const override
 	{
-		return f_ret->getValue() + s_ret->getValue();
+		return (f_ret ? f_ret->getValue() : ValueType<FRT>{}) + (s_ret ? s_ret->getValue() : ValueType<SRT>{});
 	}
 	virtual void toImGuiImpl() override
 	{
@@ -510,7 +660,7 @@ public:
 protected:
 	virtual ValT get() const override
 	{
-		return f_ret->getValue() - s_ret->getValue();
+		return (f_ret ? f_ret->getValue() : ValueType<FRT>{}) - (s_ret ? s_ret->getValue() : ValueType<SRT>{});
 	}
 	virtual void toImGuiImpl() override
 	{
@@ -556,7 +706,7 @@ public:
 protected:
 	virtual ValT get() const override
 	{
-		return f_ret->getValue() * s_ret->getValue();
+		return (f_ret ? f_ret->getValue() : ValueType<FRT>{}) * (s_ret ? s_ret->getValue() : ValueType<SRT>{});
 	}
 	virtual void toImGuiImpl() override
 	{
@@ -602,7 +752,7 @@ public:
 protected:
 	virtual ValT get() const override
 	{
-		return f_ret->getValue() / s_ret->getValue();
+		return (f_ret ? f_ret->getValue() : ValueType<FRT>{}) / (s_ret ? s_ret->getValue() : ValueType<SRT>{});
 	}
 	virtual void toImGuiImpl() override
 	{
@@ -612,89 +762,7 @@ protected:
 	}
 };
 
-#if 0
 
-template <class RetT>
-	requires std::derived_from<RetT, Returner<RetT::RetType>>
-RetT* getReturnerPointerFromJson(const nl::json& j)
-{
-	std::string name = (j.contains("name") ? j["name"] : TEXT(Returner));
-	std::string first_type = (j.contains("first_type") ? j["first_type"] : ReturnType_to_text[RetT::RetType]);
-	std::string second_type = (j.contains("second_type") ? j["second_type"] : ReturnType_to_text[RetT::RetType]);
-	
-#define RETURN_FOR_PRIM_TYPE(x) if constexpr(requires { { std::derived_from<x<RetT::RetType>, RetT> }; }) if(name == #x) return new x<RetT::RetType>
-	RETURN_FOR_PRIM_TYPE(Returner);
-	RETURN_FOR_PRIM_TYPE(ConstantReturner);
-	RETURN_FOR_PRIM_TYPE(UniformDistributionReturner);
-	RETURN_FOR_PRIM_TYPE(RectDistributionReturner);
-	RETURN_FOR_PRIM_TYPE(CircleDistributionReturner);
-	RETURN_FOR_PRIM_TYPE(DeflectDistributionReturner);
-	RETURN_FOR_PRIM_TYPE(GeneratedHeightReturner);
-	RETURN_FOR_PRIM_TYPE(NegativeReturner);
-#undef RETURN_FOR_PRUM_TYPE
-
-#define RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, t2) if constexpr(requires { { std::derived_from<x<RetT::RetType, t1, t2>, RetT> }; }) return new x<RetT::RetType, t1, t2>;
-
-#define CHECK(text, type) if(text == #type) 
-
-#define RETURN_FOR_NON_PRIM_TYPE_W1T(x, t1) \
-{\
-	CHECK(second_type, Unknown) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Unknown)\
-	CHECK(second_type, FloatValue) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, FloatValue)\
-	CHECK(second_type, IntValue) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, IntValue)\
-	CHECK(second_type, SizeTValue) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, SizeTValue)\
-	CHECK(second_type, Vector2fValue) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Vector2fValue)\
-	CHECK(second_type, Position) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Position)\
-	CHECK(second_type, Height) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Height)\
-	CHECK(second_type, XOffset) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, XOffset)\
-	CHECK(second_type, YOffset) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, YOffset)\
-	CHECK(second_type, Offset) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Offset)\
-	CHECK(second_type, Speed) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Speed)\
-	CHECK(second_type, XSpeed) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, XSpeed)\
-	CHECK(second_type, YSpeed) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, YSpeed)\
-	CHECK(second_type, XBoundary) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, XBoundary)\
-	CHECK(second_type, YBoundary) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, YBoundary)\
-	CHECK(second_type, Chance) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, Chance)\
-	CHECK(second_type, RelativeProbability) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, RelativeProbability)\
-	CHECK(second_type, ReturnerTypesCount) RETURN_FOR_NON_PRIM_TYPE_W2T(x, t1, ReturnerTypesCount)\
-}
-
-#define RETURN_FOR_NON_PRIM_TYPE(x) \
-{\
-	CHECK(first_type, Unknown) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Unknown)\
-	CHECK(first_type, FloatValue) RETURN_FOR_NON_PRIM_TYPE_W1T(x, FloatValue)\
-	CHECK(first_type, IntValue) RETURN_FOR_NON_PRIM_TYPE_W1T(x, IntValue)\
-	CHECK(first_type, SizeTValue) RETURN_FOR_NON_PRIM_TYPE_W1T(x, SizeTValue)\
-	CHECK(first_type, Vector2fValue) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Vector2fValue)\
-	CHECK(first_type, Position) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Position)\
-	CHECK(first_type, Height) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Height)\
-	CHECK(first_type, XOffset) RETURN_FOR_NON_PRIM_TYPE_W1T(x, XOffset)\
-	CHECK(first_type, YOffset) RETURN_FOR_NON_PRIM_TYPE_W1T(x, YOffset)\
-	CHECK(first_type, Offset) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Offset)\
-	CHECK(first_type, Speed) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Speed)\
-	CHECK(first_type, XSpeed) RETURN_FOR_NON_PRIM_TYPE_W1T(x, XSpeed)\
-	CHECK(first_type, YSpeed) RETURN_FOR_NON_PRIM_TYPE_W1T(x, YSpeed)\
-	CHECK(first_type, XBoundary) RETURN_FOR_NON_PRIM_TYPE_W1T(x, XBoundary)\
-	CHECK(first_type, YBoundary) RETURN_FOR_NON_PRIM_TYPE_W1T(x, YBoundary)\
-	CHECK(first_type, Chance) RETURN_FOR_NON_PRIM_TYPE_W1T(x, Chance)\
-	CHECK(first_type, RelativeProbability) RETURN_FOR_NON_PRIM_TYPE_W1T(x, RelativeProbability)\
-	CHECK(first_type, ReturnerTypesCount) RETURN_FOR_NON_PRIM_TYPE_W1T(x, ReturnerTypesCount)\
-}
-
-	CHECK(name, SumReturner) RETURN_FOR_NON_PRIM_TYPE(SumReturner)
-	CHECK(name, DifferenceReturner) RETURN_FOR_NON_PRIM_TYPE(DifferenceReturner)
-	CHECK(name, ProductReturner) RETURN_FOR_NON_PRIM_TYPE(ProductReturner)
-	CHECK(name, QuotientReturner) RETURN_FOR_NON_PRIM_TYPE(QuotientReturner)
-
-#undef RETURN_FOR_NON_PRIM_TYPE_W2T
-#undef RETURN_FOR_NON_PRIM_TYPE_W1T
-#undef RETURN_FOR_NON_PRIM_TYPE
-#undef CHECK
-	return nullptr;
-	
-}
-
-#endif
 template <class RetT, template<ReturnType> class T>
 RetT* returnForPrimType(const std::string& name) 
 {
@@ -753,16 +821,21 @@ RetT* nonZeroPtr(std::initializer_list<RetT*> l)
 
 template <class RetT>
 	requires std::derived_from<RetT, Returner<RetT::RetType>>
-RetT* getReturnerPointerFromJsonTempl(const nl::json& j)
+RetT* getReturnerPointerFromName(const std::string& name)
 {
-	if (!j.contains("name")) return nullptr;
-	std::string name = j["name"];
-	
 	return nonZeroPtr<RetT>(
 		{
-			returnForPrimTypes<RetT, Returner, ConstantReturner, UniformDistributionReturner, RectDistributionReturner, CircleDistributionReturner, DeflectDistributionReturner, GeneratedHeightReturner, NegativeReturner > (name),
-			returnForNonPrimTypes<RetT, SumReturner, DifferenceReturner, ProductReturner, QuotientReturner > (name, std::make_integer_sequence<int, ReturnerTypesCount>(), std::make_integer_sequence<int, ReturnerTypesCount>())
+			returnForPrimTypes<RetT, Returner, ConstantReturner, UniformDistributionReturner, RectDistributionReturner, CircleDistributionReturner, DeflectDistributionReturner, GeneratedHeightReturner, NegativeReturner, MinReturner, MaxReturner, ClampReturner>(name),
+			returnForNonPrimTypes<RetT, SumReturner, DifferenceReturner, ProductReturner, QuotientReturner>(name, std::make_integer_sequence<int, ReturnerTypesCount>(), std::make_integer_sequence<int, ReturnerTypesCount>())
 		});
+}
+
+template <class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
+RetT* getReturnerPointerFromJson(const nl::json& j)
+{
+	if (!j.contains("name")) return nullptr;
+	return getReturnerPointerFromName<RetT>(j["name"].get<std::string>());
 }
 
 
@@ -785,7 +858,7 @@ namespace nlohmann
 				ptr = std::unique_ptr<RetT>{};
 				return;
 			}
-			ptr = std::unique_ptr<RetT>(getReturnerPointerFromJsonTempl<RetT>(j));
+			ptr = std::unique_ptr<RetT>(getReturnerPointerFromJson<RetT>(j));
 			ptr->from_json(j);
 		};
 	};
@@ -850,6 +923,24 @@ void toImGui(std::unique_ptr<RetT>& returner, const std::string& format)
 		if (ImGui::BeginPopupContextItem(std::format("For reseting##{}", (uintptr_t)&returner).c_str()))
 		{
 			if (ImGui::SmallButton("Reset to None")) returner.reset();
+			if (ImGui::SmallButton("Copy"))
+			{
+				nl::json j;
+				returner->to_json(j);
+				doodle_jump_clipboard = j.dump();
+			}
+			if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste"))
+			{
+				nl::json j = nl::json::parse(doodle_jump_clipboard);
+				returner = std::unique_ptr<RetT>(getReturnerPointerFromJson<RetT>(j));
+				if (returner) returner->from_json(j);
+				else ImGui::OpenPopup("Paste failed");
+				if (ImGui::BeginPopup("Paste failed"))
+				{
+					ImGui::Text("Cannot paste here");
+					ImGui::EndPopup();
+				}
+			}
 			ImGui::EndPopup();
 		}
 	}
@@ -869,6 +960,9 @@ void toImGui(std::unique_ptr<RetT>& returner, const std::string& format)
 				IMGUI_BUTTON_FOR_PRIM_TYPE(DeflectDistributionReturner)
 				IMGUI_BUTTON_FOR_PRIM_TYPE(GeneratedHeightReturner)
 				IMGUI_BUTTON_FOR_PRIM_TYPE(NegativeReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(MinReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(MaxReturner)
+				IMGUI_BUTTON_FOR_PRIM_TYPE(ClampReturner)
 #undef IMGUI_BUTTON_FOR_PRIM_TYPE
 #define IMGUI_TREE_FOR_NON_PRIM_TYPE(x)\
 if(ImGui::TreeNode(#x))\
@@ -884,7 +978,21 @@ if(ImGui::TreeNode(#x))\
 #undef IMGUI_TREE_FOR_NON_PRIM_TYPE
 				ImGui::EndPopup();
 			}
+
+			if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste"))
+			{
+				nl::json j = nl::json::parse(doodle_jump_clipboard);
+				returner = std::unique_ptr<RetT>(getReturnerPointerFromJson<RetT>(j));
+				if (returner) returner->from_json(j);
+				else ImGui::OpenPopup("Paste failed");
+				if (ImGui::BeginPopup("Paste failed"))
+				{
+					ImGui::Text("Cannot paste here");
+					ImGui::EndPopup();
+				}
+			}
 			ImGui::EndPopup();
+
 		}
 	}
 	ImGui::SameLine();

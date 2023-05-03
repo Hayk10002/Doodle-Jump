@@ -59,4 +59,10 @@ namespace utils
 		}
 		return 0;
 	}
+
+	bool isMouseHoveringRect(sf::Vector2f coords, sf::Vector2f half_size, const sf::RenderWindow& window)
+	{
+		sf::Vector2f global_pos{ window.mapCoordsToPixel(coords) + window.getPosition() };
+		return ImGui::IsMouseHoveringRect(utils::toImVec2(global_pos - half_size), utils::toImVec2(global_pos + half_size));
+	}
 }

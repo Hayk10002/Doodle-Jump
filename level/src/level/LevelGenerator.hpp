@@ -650,6 +650,24 @@ void toImGui(std::unique_ptr<T>& generation, const std::string& format)
 		if (ImGui::BeginPopupContextItem(std::format("For reseting##{}", (uintptr_t)&generation).c_str()))
 		{
 			if (ImGui::SmallButton("Reset to None")) generation.reset();
+			if (ImGui::SmallButton("Copy"))
+			{
+				nl::json j;
+				generation->to_json(j);
+				doodle_jump_clipboard = j.dump();
+			}
+			if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste"))
+			{
+				nl::json j = nl::json::parse(doodle_jump_clipboard);
+				generation = std::unique_ptr<T>(getGenerationPointerFromJson<T>(j));
+				if (generation) generation->from_json(j);
+				else ImGui::OpenPopup("Paste failed");
+				if (ImGui::BeginPopup("Paste failed"))
+				{
+					ImGui::Text("Cannot paste here");
+					ImGui::EndPopup();
+				}
+			}
 			ImGui::EndPopup();
 		}
 	}
@@ -697,6 +715,20 @@ void toImGui(std::unique_ptr<T>& generation, const std::string& format)
 #undef IMGUI_BUTTON_FOR_TYPE
 				ImGui::EndPopup();
 			}
+
+			if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste"))
+			{
+				nl::json j = nl::json::parse(doodle_jump_clipboard);
+				generation = std::unique_ptr<T>(getGenerationPointerFromJson<T>(j));
+				if (generation) generation->from_json(j);
+				else ImGui::OpenPopup("Paste failed");
+				if (ImGui::BeginPopup("Paste failed"))
+				{
+					ImGui::Text("Cannot paste here");
+					ImGui::EndPopup();
+				}
+			}
+
 			ImGui::EndPopup();
 		}
 	}

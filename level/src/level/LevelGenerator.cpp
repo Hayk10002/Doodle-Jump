@@ -181,9 +181,10 @@ void from_json(const nl::json& j, LevelGenerator& level_generator)
 
 float TileGeneration::generateImpl(float generated_height, float left, float right)
 {
+	float height = height_returner ? height_returner->getValue() : 0.0f;
+	sf::Vector2f position = position_returner ? position_returner->getValue() : sf::Vector2f{};
 	Tile* tile = getTile();
-	if (!tile) return 0.0f;
-	sf::Vector2f position = position_returner->getValue();
+	if (!tile) return height;
 	tile->setPosition(position.x, generated_height - position.y);
 	getCurrentLevelForGenerating()->addTile(tile);
 	if (item_generation)
@@ -191,7 +192,7 @@ float TileGeneration::generateImpl(float generated_height, float left, float rig
 		item_generation->tile = tile;
 		item_generation->generate(generated_height, left, right);
 	}
-	return height_returner->getValue();
+	return height;
 }
 
 void TileGeneration::toImGuiImpl()
@@ -234,7 +235,7 @@ float MonsterGeneration::generateImpl(float generated_height, float, float)
 {
 	Monster* monster = getMonster();
 	if (!monster) return 0.0f;
-	sf::Vector2f position = position_returner->getValue();
+	sf::Vector2f position = position_returner ? position_returner->getValue() : sf::Vector2f{};
 	monster->setPosition(position.x, generated_height - position.y);
 	getCurrentLevelForGenerating()->addMonster(monster);
 	return 0.0f;
@@ -261,8 +262,8 @@ Tile* NormalTileGeneration::getTile()
 
 Tile* HorizontalSlidingTileGeneration::getTile()
 {
-	auto* tile = new HorizontalSlidingTile(speed_returner->getValue());
-	tile->updateMovingLocation(left_returner->getValue(), right_returner->getValue());
+	auto* tile = new HorizontalSlidingTile(speed_returner ? speed_returner->getValue() : 0.0f);
+	tile->updateMovingLocation(left_returner ? left_returner->getValue() : 0.0f, right_returner ? right_returner->getValue() : 0.0f);
 	return tile;
 }
 
@@ -276,8 +277,8 @@ void HorizontalSlidingTileGeneration::toImGuiImpl()
 
 Tile* VerticalSlidingTileGeneration::getTile()
 {
-	auto* tile = new VerticalSlidingTile(speed_returner->getValue());
-	tile->updateMovingLocation(top_returner->getValue(), bottom_returner->getValue());
+	auto* tile = new VerticalSlidingTile(speed_returner ? speed_returner->getValue() : 0.0f);
+	tile->updateMovingLocation(top_returner ? top_returner->getValue() : 0.0f, bottom_returner ? bottom_returner->getValue() : 0.0f);
 	return tile;
 }
 
@@ -291,8 +292,8 @@ void VerticalSlidingTileGeneration::toImGuiImpl()
 
 Tile* DecayedTileGeneration::getTile()
 {
-	auto* tile = new DecayedTile(speed_returner->getValue());
-	tile->updateMovingLocation(left_returner->getValue(), right_returner->getValue());
+	auto* tile = new DecayedTile(speed_returner ? speed_returner->getValue() : 0.0f);
+	tile->updateMovingLocation(left_returner ? left_returner->getValue() : 0.0f, right_returner ? right_returner->getValue() : 0.0f);
 	return tile;
 }
 
@@ -306,7 +307,7 @@ void DecayedTileGeneration::toImGuiImpl()
 
 Tile* BombTileGeneration::getTile()
 {
-	auto* tile = new BombTile(exploding_height_returner->getValue());
+	auto* tile = new BombTile(exploding_height_returner ? exploding_height_returner->getValue() : 0.0f);
 	tile->setSpecUpdate([tile, this](sf::Time) { tile->updateHeight(getCurrentLevelForGenerating()->window); });
 	return tile;
 }
@@ -326,7 +327,7 @@ Tile* OneTimeTileGeneration::getTile()
 Tile* TeleportTileGeneration::getTile()
 {
 	auto* tile = new TeleportTile;
-	for (const auto& returner : offset_returners) tile->addNewPosition(returner->getValue());
+	for (const auto& returner : offset_returners) tile->addNewPosition(returner ? returner->getValue() : sf::Vector2f{});
 	return tile;
 }
 
@@ -349,7 +350,7 @@ void TeleportTileGeneration::toImGuiImpl()
 Tile* ClusterTileGeneration::getTile()
 {
 	auto* tile = new ClusterTile(id);
-	for (const auto& returner : offset_returners) tile->addNewPosition(returner->getValue());
+	for (const auto& returner : offset_returners) tile->addNewPosition(returner ? returner->getValue() : sf::Vector2f{});
 	return tile;
 }
 
@@ -375,35 +376,35 @@ void ClusterTileGeneration::toImGuiImpl()
 Item* SpringGeneration::getItem()
 {
 	auto* item = new Spring(tile);
-	item->setOffsetFromTile(tile_offset_returner->getValue());
+	item->setOffsetFromTile(tile_offset_returner ? tile_offset_returner->getValue() : 0.0f);
 	return item;
 }
 
 Item* TrampolineGeneration::getItem()
 {
 	auto* item = new Trampoline(tile);
-	item->setOffsetFromTile(tile_offset_returner->getValue());
+	item->setOffsetFromTile(tile_offset_returner ? tile_offset_returner->getValue() : 0.0f);
 	return item;
 }
 
 Item* PropellerHatGeneration::getItem()
 {
 	auto* item = new PropellerHat(tile);
-	item->setOffsetFromTile(tile_offset_returner->getValue());
+	item->setOffsetFromTile(tile_offset_returner ? tile_offset_returner->getValue() : 0.0f);
 	return item;
 }
 
 Item* JetpackGeneration::getItem()
 {
 	auto* item = new Jetpack(tile);
-	item->setOffsetFromTile(tile_offset_returner->getValue());
+	item->setOffsetFromTile(tile_offset_returner ? tile_offset_returner->getValue() : 0.0f);
 	return item;
 }
 
 Item* SpringShoesGeneration::getItem()
 {
-	auto* item = new SpringShoes(tile, max_use_count_returner->getValue(), &getCurrentLevelForGenerating()->tiles, &getCurrentLevelForGenerating()->monsters);
-	item->setOffsetFromTile(tile_offset_returner->getValue());
+	auto* item = new SpringShoes(tile, max_use_count_returner ? max_use_count_returner->getValue() : 0u, &getCurrentLevelForGenerating()->tiles, &getCurrentLevelForGenerating()->monsters);
+	item->setOffsetFromTile(tile_offset_returner ? tile_offset_returner->getValue() : 0.0f);
 	return item;
 }
 
@@ -417,8 +418,8 @@ void SpringShoesGeneration::toImGuiImpl()
 
 Monster* BlueOneEyedMonsterGeneration::getMonster()
 {
-	auto* monster = new BlueOneEyedMonster(speed_returner->getValue());
-	monster->updateMovingLocation(left_returner->getValue(), right_returner->getValue());
+	auto* monster = new BlueOneEyedMonster(speed_returner ? speed_returner->getValue() : 0.0f);
+	monster->updateMovingLocation(left_returner ? left_returner->getValue() : 0.0f, right_returner ? right_returner->getValue() : 0.0f);
 	return monster;
 }
 
@@ -486,8 +487,8 @@ Monster* BlueWingedMonsterGeneration::getMonster()
 
 Monster* TheTerrifyingMonsterGeneration::getMonster()
 {
-	auto* monster = new TheTerrifyingMonster(speed_returner->getValue());
-	monster->updateMovingLocation(left_returner->getValue(), right_returner->getValue());
+	auto* monster = new TheTerrifyingMonster(speed_returner ? speed_returner->getValue() : sf::Vector2f{});
+	monster->updateMovingLocation(left_returner ? left_returner->getValue() : 0.0f, right_returner ? right_returner->getValue() : 0.0f);
 	return monster;
 }
 
@@ -504,7 +505,7 @@ void TheTerrifyingMonsterGeneration::toImGuiImpl()
 float GenerationWithChance::generateImpl(float generated_height, float left, float right)
 {
 	if (!generation) return 0.0f;
-	if (utils::getTrueWithChance(chance_returner->getValue())) return generation->generate(generated_height, left, right);
+	if (utils::getTrueWithChance(chance_returner ? chance_returner->getValue() : 0.0f)) return generation->generate(generated_height, left, right);
 	return 0.0f;
 
 }
@@ -533,7 +534,7 @@ void GroupGeneration::toImGuiImpl()
 	ImGui::Text("Generations:"); ImGui::SameLine();
 	if (ImGui::TreeNodeEx(std::format("(size: {})###gens", generations.size()).c_str(), ImGuiTreeNodeFlags_SpanAvailWidth))
 	{
-		for (size_t i = 0; i < generations.size(); i++) ::toImGui<Generation>(generations[i], std::format("[{}]: ", i));
+		for (size_t i = 0; i < generations.size(); i++) ::toImGui<Generation>(generations[i], std::format("[{}]:", i));
 		if (ImGui::SmallButton("New")) generations.emplace_back();
 		ImGui::TreePop();
 	}
@@ -552,7 +553,7 @@ void ConsecutiveGeneration::toImGuiImpl()
 	ImGui::Text("Generations:"); ImGui::SameLine();
 	if (ImGui::TreeNodeEx(std::format("(size: {})###gens", generations.size()).c_str(), ImGuiTreeNodeFlags_SpanAvailWidth))
 	{
-		for (size_t i = 0; i < generations.size(); i++) ::toImGui<Generation>(generations[i], std::format("[{}]: ", i));
+		for (size_t i = 0; i < generations.size(); i++) ::toImGui<Generation>(generations[i], std::format("[{}]:", i));
 		if (ImGui::SmallButton("New")) generations.emplace_back();
 		ImGui::TreePop();
 	}
@@ -570,7 +571,7 @@ void PickOneGeneration::ProbabilityGenerationPair::toImGui()
 
 float PickOneGeneration::generateImpl(float generated_height, float left, float right)
 {
-	std::deque<float> chances = generations | std::views::transform([](const ProbabilityGenerationPair& val) { return val.relative_probability_returner->getValue(); }) | std::ranges::to<std::deque>();
+	std::deque<float> chances = generations | std::views::transform([](const ProbabilityGenerationPair& val) { return val.relative_probability_returner ? val.relative_probability_returner->getValue() : 0.0f; }) | std::ranges::to<std::deque>();
 	size_t pair_ind = utils::pickOneWithRelativeProbabilities(chances);
 	if (generations[pair_ind].generation) return generations[pair_ind].generation->generate(generated_height, left, right);
 	return 0.0f;
@@ -584,7 +585,7 @@ void PickOneGeneration::toImGuiImpl()
 	{
 		for (size_t i = 0; i < generations.size(); i++)
 		{
-			ImGui::Text(std::format("[{}]: ", i).c_str()); ImGui::SameLine(); generations[i].toImGui();
+			ImGui::Text(std::format("[{}]:", i).c_str()); ImGui::SameLine(); generations[i].toImGui();
 		}
 		if (ImGui::SmallButton("New")) generations.emplace_back(std::unique_ptr<Returner<RelativeProbability>>(), std::unique_ptr<Generation>());
 		ImGui::TreePop();
