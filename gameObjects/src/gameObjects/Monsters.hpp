@@ -157,9 +157,6 @@ class OvalGreenMonster: public Monster
 	sf::Time m_oscillation_time{ sf::seconds(1) };
 	sf::Vector2f m_oscillation_size{ 15, 15 };
 	int m_hp = 2;
-	
-	std::shared_ptr<thor::AnimationMap<sf::Sprite, std::string>> m_animations;
-	thor::Animator<sf::Sprite, std::string> m_animator;
 
 public:
 	OvalGreenMonster();
@@ -173,9 +170,6 @@ class FlatGreenMonster: public Monster
 	float m_oscillation_size{ 15 };
 	int m_hp = 3;
 
-	std::shared_ptr<thor::AnimationMap<sf::Sprite, std::string>> m_animations;
-	thor::Animator<sf::Sprite, std::string> m_animator;
-
 public:
 	FlatGreenMonster();
 	void update(sf::Time dt) override;
@@ -185,9 +179,6 @@ public:
 class LargeGreenMonster : public Monster
 {
 	int m_hp = 2;
-
-	std::shared_ptr<thor::AnimationMap<sf::Sprite, std::string>> m_animations;
-	thor::Animator<sf::Sprite, std::string> m_animator;
 
 public:
 	LargeGreenMonster();
@@ -200,8 +191,6 @@ class BlueWingedMonster: public Monster
 	sf::Time m_oscillation_time{ sf::seconds(0.5) };
 	float m_oscillation_size{ 15 };
 
-	std::shared_ptr<thor::AnimationMap<sf::Sprite, std::string>> m_animations;
-	thor::Animator<sf::Sprite, std::string> m_animator;
 public:
 	BlueWingedMonster();
 	void update(sf::Time dt) override;
@@ -211,9 +200,6 @@ class TheTerrifyingMonster : public Monster
 {
 	sf::Vector2f m_speed;
 	float m_left{ 0 }, m_right{ -1 };
-
-	std::shared_ptr<thor::AnimationMap<sf::Sprite, std::string>> m_animations;
-	thor::Animator<sf::Sprite, std::string> m_animator;
 
 	int m_hp = 5;
 public:

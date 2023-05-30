@@ -203,7 +203,7 @@ void Item::draw(sf::RenderTarget& target, sf::RenderStates states) const
 }
 
 Spring::Spring(Tile* tile) :
-	Item(&global_textures["items"])
+	Item(&global_sprites["items_spring_0"].getTexture())
 {
 	m_tile = tile;
 	m_tile_offset.y = -14;
@@ -221,10 +221,10 @@ Spring::Spring(Tile* tile) :
 	tile->setReadyToBeDeleted(false);
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 0, 34, 24 }, { 17, 12 });
+	default_animation.addFrame(1, global_sprites["items_spring_0"].texture_rect, { 17, 12 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation expand_animation;
-	expand_animation.addFrame(1, { 0, 24, 34, 54 }, { 17, 42 });
+	expand_animation.addFrame(1, global_sprites["items_spring_1"].texture_rect, { 17, 42 });
 	m_animations->addAnimation("expand", expand_animation, sf::seconds(1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -254,7 +254,7 @@ float Trampoline::getDoodleRotation(float progress)
 }
 
 Trampoline::Trampoline(Tile* tile) :
-	Item(&global_textures["items"])
+	Item(&global_sprites["items_trampoline_0"].getTexture())
 {
 	m_tile = tile;
 	m_tile_offset.y = -16;
@@ -275,12 +275,12 @@ Trampoline::Trampoline(Tile* tile) :
 	tile->setReadyToBeDeleted(false);
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 34, 0, 72, 28 }, { 36, 14 });
+	default_animation.addFrame(1, global_sprites["items_trampoline_0"].texture_rect, { 36, 14 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation bounce_animation;
-	bounce_animation.addFrame(1, { 34, 28, 72, 28 }, { 36, 14 });
-	bounce_animation.addFrame(1, { 34, 56, 72, 34 }, { 36, 20 });
-	bounce_animation.addFrame(1, { 34, 28, 72, 28 }, { 36, 14 });
+	bounce_animation.addFrame(1, global_sprites["items_trampoline_0"].texture_rect, { 36, 14 });
+	bounce_animation.addFrame(1, global_sprites["items_trampoline_1"].texture_rect, { 36, 20 });
+	bounce_animation.addFrame(1, global_sprites["items_trampoline_2"].texture_rect, { 36, 14 });
 	m_animations->addAnimation("bounce", bounce_animation, sf::seconds(0.1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -326,7 +326,7 @@ float PropellerHat::getDoodleSpeed(float progress)
 }
 
 PropellerHat::PropellerHat(Tile* tile):
-	Item(&global_textures["items"])
+	Item(&global_sprites["items_propeller_hat_0"].getTexture())
 {
 	m_tile = tile;
 	m_tile_offset.y = -20;
@@ -350,13 +350,13 @@ PropellerHat::PropellerHat(Tile* tile):
 	m_tile->setReadyToBeDeleted(false);
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 106, 0, 58, 38 }, { 29, 19 });
+	default_animation.addFrame(1, global_sprites["items_propeller_hat_0"].texture_rect, { 29, 19 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation rotate_animation;
-	rotate_animation.addFrame(1, { 106, 38, 58, 46 }, { 29, 27 });
-	rotate_animation.addFrame(1, { 106, 84, 58, 52 }, { 29, 33 });
-	rotate_animation.addFrame(1, { 106, 38, 58, 46 }, { 29, 27 });
-	rotate_animation.addFrame(1, { 106, 136, 58, 52 }, { 29, 33 });
+	rotate_animation.addFrame(1, global_sprites["items_propeller_hat_1"].texture_rect, { 29, 27 });
+	rotate_animation.addFrame(1, global_sprites["items_propeller_hat_2"].texture_rect, { 29, 33 });
+	rotate_animation.addFrame(1, global_sprites["items_propeller_hat_1"].texture_rect, { 29, 27 });
+	rotate_animation.addFrame(1, global_sprites["items_propeller_hat_3"].texture_rect, { 29, 33 });
 	m_animations->addAnimation("rotate", rotate_animation, sf::seconds(0.5));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -433,8 +433,8 @@ void Jetpack::draw(sf::RenderTarget& target, sf::RenderStates states) const
 }
 
 Jetpack::Jetpack(Tile* tile) :
-	Item(&global_textures["items"]),
-	m_body(global_textures["items"])
+	Item(&global_sprites["items_jetpack_0"].getTexture()),
+	m_body(global_sprites["items_jetpack_0"].getTexture())
 {
 	m_tile = tile;
 	m_tile_offset.y = -30;
@@ -458,28 +458,28 @@ Jetpack::Jetpack(Tile* tile) :
 	m_tile->setReadyToBeDeleted(false);
 	setScale(m_texture_scale, m_texture_scale);
 	m_body.setScale(getScale());
-	m_body.setTextureRect({0, 90, 24, 72});
+	m_body.setTextureRect(global_sprites["items_jetpack_0"].texture_rect);
 	m_body.setOrigin({12, 36});
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 90, 48, 72 }, { 24, 36 });
+	default_animation.addFrame(1, global_sprites["items_jetpack_1"].texture_rect, { 24, 36 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation start_animation;
-	start_animation.addFrame(1, { 0, 162, 20, 12 }, { 10, 0 });
-	start_animation.addFrame(1, { 24, 162, 30, 24 }, { 14, 0 });
-	start_animation.addFrame(1, { 48, 90, 32, 32 }, { 16, 0 });
-	start_animation.addFrame(1, { 54, 122, 44, 50 }, { 24, 0 });
+	start_animation.addFrame(1, global_sprites["items_jetpack_2"].texture_rect, { 10, 0 });
+	start_animation.addFrame(1, global_sprites["items_jetpack_3"].texture_rect, { 14, 0 });
+	start_animation.addFrame(1, global_sprites["items_jetpack_4"].texture_rect, { 16, 0 });
+	start_animation.addFrame(1, global_sprites["items_jetpack_5"].texture_rect, { 24, 0 });
 	m_animations->addAnimation("start", start_animation, m_use_duration / 10.f);
 	thor::FrameAnimation fly_animation;
-	fly_animation.addFrame(1, { 0, 190, 48, 48 }, { 26, 0 });
-	fly_animation.addFrame(1, { 54, 172, 52, 52 }, { 28, 0 });
+	fly_animation.addFrame(1, global_sprites["items_jetpack_6"].texture_rect, { 26, 0 });
+	fly_animation.addFrame(1, global_sprites["items_jetpack_7"].texture_rect, { 28, 0 });
 	m_animations->addAnimation("fly", fly_animation, m_use_duration / 12.5f);
 	thor::FrameAnimation end_animation;
-	end_animation.addFrame(1, { 106, 188, 28, 38 }, { 14, 0 });
-	end_animation.addFrame(1, { 80, 90, 26, 26 }, { 13, 0 });
-	end_animation.addFrame(1, { 0, 174, 24, 16 }, { 12, 0 });
+	end_animation.addFrame(1, global_sprites["items_jetpack_8"].texture_rect, { 14, 0 });
+	end_animation.addFrame(1, global_sprites["items_jetpack_9"].texture_rect, { 13, 0 });
+	end_animation.addFrame(1, global_sprites["items_jetpack_10"].texture_rect, { 12, 0 });
 	m_animations->addAnimation("end", end_animation, m_use_duration / 10.f);
 	thor::FrameAnimation ended_animation;
-	ended_animation.addFrame(1, { 0, 90, 24, 72 }, { 12, 36 });
+	ended_animation.addFrame(1, global_sprites["items_jetpack_0"].texture_rect, { 12, 36 });
 	m_animations->addAnimation("ended", ended_animation, sf::seconds(1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -563,8 +563,8 @@ void SpringShoes::draw(sf::RenderTarget& target, sf::RenderStates states) const
 }
 
 SpringShoes::SpringShoes(Tile* tile, size_t max_use_count, Tiles* tiles, Monsters* monsters):
-	Item(&global_textures["items"]),
-	m_shoes(global_textures["items"]),
+	Item(&global_sprites["items_spring_shoes_0"].getTexture()),
+	m_shoes(global_sprites["items_spring_shoes_0"].getTexture()),
 	m_max_use_count(max_use_count),
 	m_tiles(tiles),
 	m_monsters(monsters)
@@ -572,7 +572,7 @@ SpringShoes::SpringShoes(Tile* tile, size_t max_use_count, Tiles* tiles, Monster
 	m_tile = tile;
 	m_tile_offset.y = -24;
 	m_collision_box_size = sf::Vector2f{ 52, 38 } *m_texture_scale;
-	setTextureRect({ 0, 252, 52, 24 });
+	setTextureRect(global_sprites["items_spring_shoes_0"].texture_rect);
 	setOrigin(26, 0);
 	setDoodleCollisionCallback([this](Doodle* doodle)
 	{
@@ -594,8 +594,8 @@ SpringShoes::SpringShoes(Tile* tile, size_t max_use_count, Tiles* tiles, Monster
 	m_tile->setReadyToBeDeleted(false);
 	setScale(m_texture_scale, m_texture_scale);
 	m_shoes.setScale(getScale());
-	m_shoes.addExhibit({ {0, 238, 52, 14}, {26, 14} });
-	m_shoes.addExhibit({ {52, 238, 48, 14}, {24, 14} });
+	m_shoes.addExhibit({ (sf::FloatRect)global_sprites["items_spring_shoes_1"].texture_rect, {26, 14} });
+	m_shoes.addExhibit({ (sf::FloatRect)global_sprites["items_spring_shoes_2"].texture_rect, {24, 14} });
 	m_shoes.set(1);
 }
 
@@ -697,12 +697,12 @@ Shield::Shield(Tile* tile):
 	tile->setReadyToBeDeleted(false);
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 100, 230, 66, 66 }, { 33, 33 });
+	default_animation.addFrame(1, global_sprites["items_shield_0"].texture_rect, { 33, 33 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation use_animation;
-	use_animation.addFrame(1, { 170, 0, 192, 192 }, { 96, 96 });
-	use_animation.addFrame(1, { 170, 192, 192, 192 }, { 96, 96 });
-	use_animation.addFrame(1, { 170, 384, 192, 192 }, { 96, 96 });
+	use_animation.addFrame(1, global_sprites["items_shield_1"].texture_rect, { 96, 96 });
+	use_animation.addFrame(1, global_sprites["items_shield_2"].texture_rect, { 96, 96 });
+	use_animation.addFrame(1, global_sprites["items_shield_3"].texture_rect, { 96, 96 });
 	m_animations->addAnimation("use", use_animation, sf::seconds(0.2));
 	m_animator.play() << thor::Playback::loop("default");
 }

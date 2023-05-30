@@ -3,6 +3,7 @@
 #include <fstream>
 #include <common/Resources.hpp>
 #include <common/Utils.hpp>
+#include <common/Previews.hpp>
 #include <DoodleJumpConfig.hpp>
 
 Level::Level(sf::RenderWindow& window) :
@@ -13,6 +14,8 @@ Level::Level(sf::RenderWindow& window) :
 	items(window),
 	monsters(window)
 {
+	Previews::window = &window;
+
 	//create level scene
 	scene.addObject(ib, []() {});
 	scene.addObject(tiles);
@@ -87,9 +90,23 @@ void Level::saveToFile(std::string path)
 void Level::loadFromFile(std::string path)
 {
 	std::ifstream fin(path);
+	if (!fin) return;
 	nl::json j;
 	fin >> j;
 	j.get_to(*this);
+}
+
+void Level::refresh()
+{
+	doodle.ressurrect(sf::Vector2f{ window.getSize() / 2u });
+	doodle.updateArea(sf::FloatRect{ {0, 0}, sf::Vector2f(window.getSize()) });
+
+	tiles.m_tiles.clear();
+	items.m_items.clear();
+	monsters.m_monsters.clear();
+	scene.scroll(sf::Vector2f(window.getSize() / 2u) - window.getView().getCenter(), true);
+	scene.updateScrolling();
+	level_generator.reset();
 }
 
 void to_json(nl::json& j, const Level& level)

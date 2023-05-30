@@ -73,12 +73,12 @@ void Tile::draw(sf::RenderTarget& target, sf::RenderStates states) const
 
 
 NormalTile::NormalTile() :
-	Tile(&global_textures["tiles"])
+	Tile(&global_sprites["tiles_normal"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 0, 128, 40 }, { 64, 20 });
+	default_animation.addFrame(1, global_sprites["tiles_normal"].texture_rect, {64, 20});
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -91,13 +91,13 @@ void NormalTile::update(sf::Time dt)
 }
 
 HorizontalSlidingTile::HorizontalSlidingTile(float speed):
-	Tile(&global_textures["tiles"]),
+	Tile(&global_sprites["tiles_horizontal"].getTexture()),
 	m_speed(speed)
 {
 	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 40, 128, 40 }, { 64, 20 });
+	default_animation.addFrame(1, global_sprites["tiles_horizontal"].texture_rect, {64, 20});
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -131,13 +131,13 @@ void HorizontalSlidingTile::updateMovingLocation(float left, float right)
 }
 
 VerticalSlidingTile::VerticalSlidingTile(float speed):
-	Tile(&global_textures["tiles"]),
+	Tile(&global_sprites["tiles_vertical"].getTexture()),
 	m_speed(speed)
 {
 	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 80, 128, 40 }, { 64, 20 });
+	default_animation.addFrame(1, global_sprites["tiles_vertical"].texture_rect, {64, 20});
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -174,7 +174,7 @@ DecayedTile::DecayedTile() : DecayedTile(0)
 {}
 
 DecayedTile::DecayedTile(float speed) :
-	Tile(&global_textures["tiles"]),
+	Tile(&global_sprites["tiles_decayed_0"].getTexture()),
 	m_speed(speed)
 {
 	m_collision_box_size = sf::Vector2f{ 120, 30 } *m_texture_scale;
@@ -189,13 +189,13 @@ DecayedTile::DecayedTile(float speed) :
 	});
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 120, 128, 40 }, { 64, 20 });
+	default_animation.addFrame(1, global_sprites["tiles_decayed_0"].texture_rect, { 64, 20 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation breaking_animation;
-	breaking_animation.addFrame(1, { 0, 120, 128, 40 }, { 64, 20 });
-	breaking_animation.addFrame(1, { 0, 160, 128, 40 }, { 64, 20 });
-	breaking_animation.addFrame(1, { 0, 200, 128, 60 }, { 64, 20 });
-	breaking_animation.addFrame(1, { 0, 260, 128, 60 }, { 64, 20 });
+	breaking_animation.addFrame(1, global_sprites["tiles_decayed_0"].texture_rect, { 64, 20 });
+	breaking_animation.addFrame(1, global_sprites["tiles_decayed_1"].texture_rect, { 64, 20 });
+	breaking_animation.addFrame(1, global_sprites["tiles_decayed_2"].texture_rect, { 64, 20 });
+	breaking_animation.addFrame(1, global_sprites["tiles_decayed_3"].texture_rect, { 64, 20 });
 	m_animations->addAnimation("break", breaking_animation, sf::seconds(0.1));
 
 	m_animator.play() << thor::Playback::loop("default");
@@ -231,7 +231,7 @@ void DecayedTile::updateMovingLocation(float left, float right)
 }
 
 BombTile::BombTile(float exploding_height):
-	Tile(&global_textures["tiles"]),
+	Tile(&global_sprites["tiles_bomb_0"].getTexture()),
 	m_exploding_height(exploding_height)
 {
 	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
@@ -246,19 +246,19 @@ BombTile::BombTile(float exploding_height):
 	});
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 360, 128, 40 }, { 64, 20 });
+	default_animation.addFrame(1, global_sprites["tiles_bomb_0"].texture_rect, { 64, 20 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation preparing_animation;
-	preparing_animation.addFrame(1, { 0, 360, 128, 40 }, { 64, 20 });
-	preparing_animation.addFrame(1, { 0, 400, 128, 40 }, { 64, 20 });
-	preparing_animation.addFrame(1, { 0, 440, 128, 40 }, { 64, 20 });
-	preparing_animation.addFrame(1, { 0, 480, 128, 40 }, { 64, 20 });
-	preparing_animation.addFrame(10, { 0, 520, 128, 40 }, { 64, 20 });
+	preparing_animation.addFrame(1, global_sprites["tiles_bomb_0"].texture_rect, { 64, 20 });
+	preparing_animation.addFrame(1, global_sprites["tiles_bomb_1"].texture_rect, { 64, 20 });
+	preparing_animation.addFrame(1, global_sprites["tiles_bomb_2"].texture_rect, { 64, 20 });
+	preparing_animation.addFrame(1, global_sprites["tiles_bomb_3"].texture_rect, { 64, 20 });
+	preparing_animation.addFrame(10, global_sprites["tiles_bomb_4"].texture_rect, { 64, 20 });
 	m_animations->addAnimation("prepare", preparing_animation, sf::seconds(0.8));
 	thor::FrameAnimation exploding_animation;
-	exploding_animation.addFrame(1, { 0, 560, 128, 40 }, { 64, 20 });
-	exploding_animation.addFrame(1, { 0, 600, 128, 60 }, { 64, 30 });
-	exploding_animation.addFrame(1, { 0, 660, 128, 60 }, { 64, 30 });
+	exploding_animation.addFrame(1, global_sprites["tiles_bomb_5"].texture_rect, { 64, 20 });
+	exploding_animation.addFrame(1, global_sprites["tiles_bomb_6"].texture_rect, { 64, 30 });
+	exploding_animation.addFrame(1, global_sprites["tiles_bomb_7"].texture_rect, { 64, 30 });
 	m_animations->addAnimation("explode", exploding_animation, sf::seconds(0.2));
 
 	m_animator.play() << thor::Playback::loop("default");
@@ -299,7 +299,7 @@ void BombTile::startExploding()
 }
 
 OneTimeTile::OneTimeTile():
-	Tile(&global_textures["tiles"])
+	Tile(&global_sprites["tiles_one_time"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setDoodleJumpCallback([this]()
@@ -311,7 +311,7 @@ OneTimeTile::OneTimeTile():
 	});
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 720, 128, 40 }, { 64, 20 });
+	default_animation.addFrame(1, global_sprites["tiles_one_time"].texture_rect, {64, 20});
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	m_animations->addAnimation("disappear", [](sf::Sprite& sp, float progress)
 	{
@@ -336,7 +336,7 @@ bool OneTimeTile::isDestroyed() const
 }
 
 TeleportTile::TeleportTile() :
-	Tile(&global_textures["tiles"])
+	Tile(&global_sprites["tiles_teleport_0"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
 	setDoodleJumpCallback([this]()
@@ -348,7 +348,7 @@ TeleportTile::TeleportTile() :
 	size_t size = thor::Distributions::uniform(10, 15)();
 	auto dur_dist = thor::Distributions::uniform(1, 3);
 	thor::FrameAnimation default_animation;
-	for (size_t i = 0; i < size; i++) default_animation.addFrame(dur_dist(), { 0, (i % 2) ? 800 : 760, 128, 40 }, {64, 20});
+	for (size_t i = 0; i < size; i++) default_animation.addFrame(dur_dist(), global_sprites[std::string("tiles_teleport_") + char(i + 48)].texture_rect, {64, 20});
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	m_animations->addAnimation("disappear", [](sf::Sprite& sp, float progress)
 	{
@@ -462,7 +462,7 @@ void from_json(const nl::json& j, ClusterTile::Id& id)
 }
 
 ClusterTile::ClusterTile(Id id):
-	Tile(&global_textures["tiles"]),
+	Tile(&global_sprites["tiles_cluster"].getTexture()),
 	m_id(id)
 {
 	m_collision_box_size = sf::Vector2f{ 114, 30 } *m_texture_scale;
@@ -473,7 +473,7 @@ ClusterTile::ClusterTile(Id id):
 	});	
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, {0, 320, 128, 40 }, { 64, 20 });
+	default_animation.addFrame(1, global_sprites["tiles_cluster"].texture_rect, {64, 20});
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	m_animator.play() << thor::Playback::loop("default");
 	m_id.addTile(this);
@@ -592,7 +592,8 @@ sf::Vector2f ClusterTile::getCurrentOffset() const
 
 void ClusterTile::next(bool recursive)
 {
-	++m_current_offset_index %= m_offsets.size();
+	m_current_offset_index++;
+	m_current_offset_index %= m_offsets.size();
 	m_is_in_transition = true;
 	m_transition_start = m_existing_time;
 	if(recursive) for (auto tile : (*m_id.m_tiles)) if(tile != this) tile->next(0);

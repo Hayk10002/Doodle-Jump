@@ -13,6 +13,8 @@ add_library(${CommonTargetName} STATIC
             src/common/GameStuff.cpp
             src/common/Returners.hpp
             src/common/Returners.cpp
+            src/common/Previews.hpp
+            src/common/Previews.cpp
 )
 
 target_compile_options(${CommonTargetName} PUBLIC /bigobj)

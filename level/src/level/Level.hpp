@@ -40,6 +40,7 @@ struct Level
 
 	void saveToFile(std::string path);
 	void loadFromFile(std::string path);
+	void refresh();
 
 	friend void to_json(nl::json& j, const Level& level);
 	friend void from_json(const nl::json& j, Level& level);

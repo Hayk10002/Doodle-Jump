@@ -1,4 +1,5 @@
 #include <iostream>
+#include <deque>
 
 #include <SFML/Graphics.hpp>
 
@@ -9,24 +10,15 @@
 #include <Thor/Input.hpp>
 #include <Thor/Resources.hpp>
 #include <Thor/Math.hpp>
+#include <Thor/Vectors.hpp>
 #include <SelbaWard.hpp>
 #include <nlohmann/json.hpp>
 
 #include <DoodleJumpConfig.hpp>
 #include <common/Resources.hpp>
-#include <common/DebugImGui.hpp>
-#include <common/Utils.hpp>
 #include <common/GameStuff.hpp>
-#include <drawables/ImageBackground.hpp>
-#include <drawables/Scene.hpp>
+#include <common/Previews.hpp>
 #include <level/Level.hpp>
-#include <level/LevelGenerator.hpp>
-#include <gameObjects/Doodle.hpp>
-#include <gameObjects/Tiles.hpp>
-#include <gameObjects/Items.hpp>
-#include <gameObjects/Monsters.hpp>
-
-
 
 
 
@@ -47,7 +39,7 @@ int main()
 
 	//create the level
 	Level level(window);
-	std::string save_file_name{ "level.json" };
+	size_t current_level = 0;
 	
 	//setup the user actions
 	thor::ActionMap<std::string> action_map;
@@ -57,6 +49,8 @@ int main()
 	size_t frame_count = 0;
 	sf::Clock deltaClock;
 	sf::Time full_time, dt;
+	
+	Previews::window = &window;
 
 	while (window.isOpen())
 	{
@@ -95,23 +89,32 @@ int main()
 		frame_count++;
 		full_time += (dt = deltaClock.restart());
 
-		
 		ImGui::SFML::Update(window, dt);
-		ImGui::ShowDemoWindow();
 		ImGui::Begin("Info");
+		ImGui::BeginChild("Info_level", ImVec2(ImGui::GetContentRegionAvail().x * 0.5, 0), true);
 		ImGui::Text("Frame count: %d", frame_count);
 		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
 		level.level_generator.toImGui();
-		ImGui::InputText("Save file", &save_file_name);
-		if (ImGui::Button("Load from the save file")) level.loadFromFile(RESOURCES_PATH + save_file_name);
-		if (ImGui::Button("Save to the save file")) level.saveToFile(RESOURCES_PATH + save_file_name);
-		if (ImGui::TreeNode("Hello"))
-		{
-			ImGui::Text("World?");
-			ImGui::TreePop();
-		}
-		
-		
+
+		ImGui::Text("Level no.");
+		ImGui::SameLine();
+		ImGui::InputScalar("##Level no", ImGuiDataType_U64, &current_level);
+		ImGui::SameLine();
+		if (ImGui::SmallButton("Load")) level.loadFromFile(std::format(RESOURCES_PATH"Levels/level{}.json", current_level));
+		ImGui::SameLine();
+		if (ImGui::SmallButton("Save")) level.saveToFile(std::format(RESOURCES_PATH"Levels/level{}.json", current_level));
+
+		ImGui::EndChild();
+		ImGui::SameLine();
+
+		ImGui::BeginChild("Info_clipboard", ImVec2(ImGui::GetContentRegionAvail().x * 0.5, 0));
+		doodle_jump_clipboard.toImGui();
+		ImGui::EndChild();
+
+		ImGui::SameLine();
+		ImGui::BeginChild("Info_save_files", ImVec2{}, true);
+		saveFilesInfoToImGui();
+		ImGui::EndChild();
 		ImGui::End();
 
 		if (action_map.isActive("close"))
@@ -131,6 +134,7 @@ int main()
 		//drawing
 		window.clear();
 		window.draw(level.ib);
+		if (level.level_generator.getGeneration()) level.level_generator.getGeneration()->drawPreview({0.f, (float)window.getSize().y});
 		ImGui::SFML::Render(window);
 		window.display();
 	}
@@ -142,3 +146,4 @@ int main()
 
 	return 0;
 }
+

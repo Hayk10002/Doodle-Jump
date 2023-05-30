@@ -1,14 +1,20 @@
 #pragma once
 #include <concepts>
 #include <string>
+#include <utility>
+#include <typeinfo>
+#include <fstream>
 
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include <nlohmann/json.hpp>
 #include <SFML/Graphics.hpp>
 #include <Thor/Math/Distributions.hpp>
 
 #include <common/GameStuff.hpp>
 #include <common/Utils.hpp>
+#include <common/Previews.hpp>
+#include <DoodleJumpConfig.hpp>
 
 #define TEXT(x) #x
 
@@ -31,7 +37,7 @@ enum ReturnType
 	YBoundary,
 	Chance,
 	RelativeProbability,
-	ReturnerTypesCount
+	ReturnTypesCount
 };
 
 constexpr const char* ReturnType_to_text[] = 
@@ -53,7 +59,7 @@ constexpr const char* ReturnType_to_text[] =
 	TEXT(YBoundary),
 	TEXT(Chance),
 	TEXT(RelativeProbability),
-	TEXT(ReturnerTypesCount)
+	TEXT(ReturnTypesCount)
 };
 
 namespace
@@ -75,16 +81,16 @@ namespace
 	template<> struct ToValueType<YBoundary> { using type = float; };
 	template<> struct ToValueType<Chance> { using type = float; };
 	template<> struct ToValueType<RelativeProbability> { using type = float; };
-	template<> struct ToValueType<ReturnerTypesCount> { using type = void; };
+	template<> struct ToValueType<ReturnTypesCount> { using type = void; };
 	template<ReturnType type> using ValueType = ToValueType<type>::type;
 
 	template<class T, class... Ts>
 	concept one_of_types = (std::same_as<T, Ts> || ...);
 }
 
-void toImGui(float& val);
-void toImGui(int& val);
-void toImGui(size_t& val);
+void toImGui(float& val, const float* min = nullptr, const float* max = nullptr);
+void toImGui(int& val, const int* min = nullptr, const int* max = nullptr);
+void toImGui(size_t& val, const size_t* min = nullptr, const size_t* max = nullptr);
 void toImGui(sf::Vector2f& val);
 
 template<class T>
@@ -103,10 +109,8 @@ public:
 	constexpr static inline ReturnType RetType = RT;
 	Returner() : ImGui_id{ ++ImGui_id_counter } {}
 
-	ValT getValue() const
-	{
-		return get();
-	}
+	ValT getValue() const { return get(); }
+	ValT getMeanValue() const { return getMean(); }
 
 	virtual void to_json(nl::json& j) const
 	{
@@ -117,25 +121,35 @@ public:
 	void toImGui()
 	{
 		static size_t id = 0;
-		if (ImGui::TreeNodeEx(std::format("{} (type: {})##{}", getName(), ReturnType_to_text[RT], ImGui_id).c_str(), ImGuiTreeNodeFlags_SpanAvailWidth))
+		if (ImGui::TreeNodeEx(std::format("{} (type: {})##{}", getName(), ReturnType_to_text[RT], ImGui_id).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			bool canPrev = canPreview();
+			if (!canPrev) ImGui::Text("Can't preview");
+			else ImGui::Checkbox("Preview", &preview);
 			toImGuiImpl();
 			ImGui::TreePop();
 		}
 	}
 
+	virtual std::string getName() const { return TEXT(Returner); }
 
-	virtual std::string getName() const
+	bool preview{ true };
+
+	void drawPreview(sf::Vector2f offset = sf::Vector2f{}) const
 	{
-		return TEXT(Returner);
+		drawSubReturnersPreview(offset);
+		if (!preview) return;
+		drawPreviewImpl(offset);
 	}
+
+	virtual bool canPreview() const { return false; }
 
 protected:
-	virtual ValT get() const
-	{
-		return ValT{};
-	}
+	virtual ValT get() const { return ValT{}; }
+	virtual ValT getMean() const { return ValT{}; }
 	virtual void toImGuiImpl() {}
+	virtual void drawPreviewImpl(sf::Vector2f offset) const {}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const {}
 };
 
 template<class RetT>
@@ -143,6 +157,7 @@ template<class RetT>
 void toImGui(std::unique_ptr<RetT>& returner, const std::string& format);
 
 template <ReturnType RT>
+	requires std::default_initializable<ValueType<RT>>
 class ConstantReturner : public Returner<RT>
 {
 public:
@@ -163,17 +178,45 @@ public:
 		if (j.contains("value")) j["value"].get_to(val);
 	}
 
-	virtual std::string getName() const override { return TEXT(ConstantReturner); }
+	virtual std::string getName() const override { return "Constant"; }
+
+	virtual bool canPreview() const override
+	{
+		if constexpr (
+			RT == Position ||
+			RT == Height ||
+			RT == XOffset ||
+			RT == YOffset ||
+			RT == Offset ||
+			RT == Speed ||
+			RT == XSpeed ||
+			RT == YSpeed ||
+			RT == XBoundary ||
+			RT == YBoundary
+			) return true;
+		else return false;
+	}
 
 protected:
-	virtual ValT get() const override 
-	{ 
-		return val;
-	}
+	virtual ValT get() const override { return val; }
+	virtual ValT getMean() const override { return val; }
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		ImGui::Text("Value:"); ImGui::SameLine(); ::toImGui(val);
+	}
+	virtual void drawPreviewImpl(sf::Vector2f offset) const override
+	{
+		if constexpr (RT == Position) Previews::point(this->getMeanValue(), offset);
+		if constexpr (RT == Height) Previews::height(this->getMeanValue(), offset);
+		if constexpr (RT == XOffset) Previews::offset(sf::Vector2f{ this->getMeanValue(), 0.f }, offset);
+		if constexpr (RT == YOffset) Previews::offset(sf::Vector2f{ 0.f, this->getMeanValue() }, offset);
+		if constexpr (RT == Offset) Previews::offset(this->getMeanValue(), offset);
+		if constexpr (RT == Speed) Previews::speed(this->getMeanValue(), offset);
+		if constexpr (RT == XSpeed) Previews::speed(sf::Vector2f{ this->getMeanValue(), 0.f }, offset);
+		if constexpr (RT == YSpeed) Previews::speed(sf::Vector2f{ 0.f, this->getMeanValue() }, offset);
+		if constexpr (RT == XBoundary) Previews::xBoundary(this->getMeanValue(), offset);
+		if constexpr (RT == YBoundary) Previews::yBoundary(this->getMeanValue(), offset);
 	}
 };
 
@@ -206,7 +249,21 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(UniformDistributionReturner);
+		return "Uniform Distribution";
+	}
+
+	virtual bool canPreview() const override
+	{
+		if constexpr (
+			RT == Height ||
+			RT == XOffset ||
+			RT == YOffset ||
+			RT == XSpeed ||
+			RT == YSpeed ||
+			RT == XBoundary ||
+			RT == YBoundary
+			) return true;
+		else return false;
 	}
 
 protected:
@@ -214,11 +271,64 @@ protected:
 	{ 
 		return thor::Distributions::uniform(min_val, max_val)();
 	}
+	virtual ValT getMean() const override { return (min_val + max_val) / 2.f; }
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
-		ImGui::Text("Min:"); ImGui::SameLine(); ::toImGui(min_val);
-		ImGui::Text("Max:"); ImGui::SameLine(); ::toImGui(max_val);
+		ImGui::Text("Min:"); ImGui::SameLine(); ::toImGui(min_val, nullptr, &max_val);
+		ImGui::Text("Max:"); ImGui::SameLine(); ::toImGui(max_val, &min_val);
+	}
+	virtual void drawPreviewImpl(sf::Vector2f offset) const override
+	{
+		if constexpr (RT == Height) 
+		{
+			Previews::rect({ 25.f, (max_val - min_val) / 2.f }, offset + sf::Vector2f{ 0.f, -this->getMeanValue() });
+			Previews::height(min_val, offset);
+			Previews::height(max_val, offset);
+		}
+		if constexpr (RT == XOffset) 
+		{
+			Previews::rect({ (max_val - min_val) / 2.f, 10.f }, offset + sf::Vector2f{ this->getMeanValue(), 0.f });
+			Previews::offset({ min_val, 0.f }, offset);
+			Previews::offset({ max_val, 0.f }, offset);
+
+		}
+		if constexpr (RT == YOffset) 
+		{
+			Previews::rect({ 10.f, (max_val - min_val) / 2.f }, offset + sf::Vector2f{ 0.f, -this->getMeanValue() });
+			Previews::offset({ 0.f, min_val }, offset);
+			Previews::offset({ 0.f, max_val }, offset);
+		}
+		if constexpr (RT == XSpeed) 
+		{
+			Previews::rect({ (max_val - min_val) / 2.f, 10.f }, offset + sf::Vector2f{ this->getMeanValue(), 0.f });
+			Previews::speed({ min_val, 0.f }, offset);
+			Previews::speed({ max_val, 0.f }, offset);
+		}
+		if constexpr (RT == YSpeed) 
+		{
+			Previews::rect({ 10.f, (max_val - min_val) / 2.f }, offset + sf::Vector2f{ 0.f, -this->getMeanValue() });
+			Previews::speed({ 0.f, min_val }, offset);
+			Previews::speed({ 0.f, max_val }, offset);
+		}
+		if constexpr (RT == XBoundary) 
+		{
+			float bottom_y = Previews::window->mapPixelToCoords({ 0, (int)Previews::window->getSize().y }).y;
+			float top_y = Previews::window->mapPixelToCoords({ 0, 0 }).y;
+			float window_view_height = bottom_y - top_y;
+			Previews::rect({ (max_val - min_val) / 2.f, window_view_height / 2.f }, sf::Vector2f{offset.x + this->getMeanValue(), (bottom_y + top_y) / 2.f});
+			Previews::xBoundary(min_val, offset);
+			Previews::xBoundary(max_val, offset);
+		}
+		if constexpr (RT == YBoundary)
+		{
+			float right_x = Previews::window->mapPixelToCoords({ (int)Previews::window->getSize().x, 0 }).x;
+			float left_x = Previews::window->mapPixelToCoords({ 0, 0 }).x;
+			float window_view_width = right_x - left_x;
+			Previews::rect({ window_view_width / 2.f, (max_val - min_val) / 2.f }, sf::Vector2f{ (left_x + right_x) / 2.f, offset.y - this->getMeanValue() });
+			Previews::yBoundary(min_val, offset);
+			Previews::yBoundary(max_val, offset);
+		}
 	}
 };
 
@@ -251,19 +361,37 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(RectDistributionReturner);
+		return "Rect Distribution";
 	}
 	
+	virtual bool canPreview() const override
+	{
+		if constexpr (
+			RT == Position ||
+			RT == Offset ||
+			RT == Speed
+			) return true;
+		else return false;
+	}
+
 protected:
 	virtual ValT get() const override
 	{
 		return thor::Distributions::rect(center, half_size)();
 	}
+	virtual ValT getMean() const override { return center; }
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		ImGui::Text("Center:"); ImGui::SameLine(); ::toImGui(center);
 		ImGui::Text("Half size:"); ImGui::SameLine(); ::toImGui(half_size);
+	}
+	virtual void drawPreviewImpl(sf::Vector2f offset) const override
+	{
+		Previews::rect(half_size, offset + sf::Vector2f{center.x, -center.y});
+		if constexpr (RT == Position) Previews::point(center, offset);
+		if constexpr (RT == Offset) Previews::offset(center, offset);
+		if constexpr (RT == Speed) Previews::speed(center, offset);
 	}
 };
 
@@ -297,7 +425,17 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(CircleDistributionReturner);
+		return "Circle Distribution";
+	}
+
+	virtual bool canPreview() const override
+	{
+		if constexpr (
+			RT == Position ||
+			RT == Offset ||
+			RT == Speed
+			) return true;
+		else return false;
 	}
 
 protected:
@@ -305,11 +443,20 @@ protected:
 	{
 		return thor::Distributions::circle(center, radius)();
 	}
+	virtual ValT getMean() const override { return center; }
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		ImGui::Text("Center:"); ImGui::SameLine(); ::toImGui(center);
-		ImGui::Text("Radius:"); ImGui::SameLine(); ::toImGui(radius);
+		const float min = 0;
+		ImGui::Text("Radius:"); ImGui::SameLine(); ::toImGui(radius, &min);
+	}
+	virtual void drawPreviewImpl(sf::Vector2f offset) const override
+	{
+		Previews::circle(radius, offset + sf::Vector2f{ center.x, -center.y });
+		if constexpr (RT == Position) Previews::point(center, offset);
+		if constexpr (RT == Offset) Previews::offset(center, offset);
+		if constexpr (RT == Speed) Previews::speed(center, offset);
 	}
 };
 
@@ -343,7 +490,17 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(DeflectDistributionReturner);
+		return "Deflect Distribution";
+	}
+
+	virtual bool canPreview() const override
+	{
+		if constexpr (
+			RT == Position ||
+			RT == Offset ||
+			RT == Speed
+			) return true;
+		else return false;
 	}
 
 protected:
@@ -351,11 +508,20 @@ protected:
 	{
 		return thor::Distributions::deflect(direction, max_rotation)();
 	}
+	virtual ValT getMean() const override { return direction; }
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		ImGui::Text("Direction:"); ImGui::SameLine(); ::toImGui(direction);
-		ImGui::Text("Max rotation:"); ImGui::SameLine(); ::toImGui(max_rotation);
+		const float min = 0;
+		ImGui::Text("Max rotation:"); ImGui::SameLine(); ::toImGui(max_rotation, &min);
+	}
+	virtual void drawPreviewImpl(sf::Vector2f offset) const override
+	{
+		Previews::deflect(max_rotation, direction, offset);
+		if constexpr (RT == Position) Previews::point(direction, offset);
+		if constexpr (RT == Offset) Previews::offset(direction, offset);
+		if constexpr (RT == Speed) Previews::speed(direction, offset);
 	}
 };
 
@@ -377,15 +543,16 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(GeneratedHeightReturner);
+		return "Generated Height";
 	}
 
 protected:
 	virtual ValT get() const override;
+	virtual ValT getMean() const override { return this->getValue(); }
 };
 
 template<ReturnType RT>
-	requires requires { {-std::declval<ValueType<RT>>} -> std::same_as<ValueType<RT>>; }
+	requires requires { {-std::declval<ValueType<RT>>()} -> std::same_as<ValueType<RT>>; }
 class NegativeReturner : public Returner<RT>
 {
 public:
@@ -410,7 +577,7 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(NegativeReturner);
+		return "Negative";
 	}
 
 protected:
@@ -418,11 +585,16 @@ protected:
 	{
 		return ret ? -ret->getValue() : ValT{};
 	}
+	virtual ValT getMean() const override
+	{
+		return ret ? -ret->getMeanValue() : ValT{};
+	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<RT>>(ret, "Value:");
 	}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const override { if (ret) ret->drawPreview(offset); }
 };
 
 template <ReturnType RT>
@@ -455,7 +627,7 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(MinReturner);
+		return "Minimum";
 	}
 
 protected:
@@ -465,11 +637,22 @@ protected:
 		ValT s_val = s_ret ? s_ret->getValue() : ValT{};
 		return (f_val < s_val) ? f_val : s_val;
 	}
+	virtual ValT getMean() const override
+	{
+		ValT f_val = f_ret ? f_ret->getMeanValue() : ValT{};
+		ValT s_val = s_ret ? s_ret->getMeanValue() : ValT{};
+		return (f_val < s_val) ? f_val : s_val;
+	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<RT>>(f_ret, "First:");
 		::toImGui<Returner<RT>>(s_ret, "Second:");
+	}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const override
+	{
+		if (f_ret) f_ret->drawPreview(offset);
+		if (s_ret) s_ret->drawPreview(offset);
 	}
 };
 
@@ -503,7 +686,7 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(MaxReturner);
+		return "Maximum";
 	}
 
 protected:
@@ -513,11 +696,22 @@ protected:
 		ValT s_val = s_ret ? s_ret->getValue() : ValT{};
 		return (f_val < s_val) ? s_val : f_val;
 	}
+	virtual ValT getMean() const override
+	{
+		ValT f_val = f_ret ? f_ret->getMeanValue() : ValT{};
+		ValT s_val = s_ret ? s_ret->getMeanValue() : ValT{};
+		return (f_val < s_val) ? s_val : f_val;
+	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<RT>>(f_ret, "First:");
 		::toImGui<Returner<RT>>(s_ret, "Second:");
+	}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const override
+	{
+		if (f_ret) f_ret->drawPreview(offset);
+		if (s_ret) s_ret->drawPreview(offset);
 	}
 };
 
@@ -555,7 +749,7 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(ClampReturner);
+		return "Clamp";
 	}
 
 protected:
@@ -569,12 +763,28 @@ protected:
 		if (max_val < val) return max_val;
 		return val;
 	}
+	virtual ValT getMean() const override
+	{
+		ValT val = ret ? ret->getMeanValue() : ValT{};
+		ValT min_val = min_ret ? min_ret->getMeanValue() : ValT{};
+		ValT max_val = max_ret ? max_ret->getMeanValue() : ValT{};
+		if (max_val < min_val) return val;
+		if (val < min_val) return min_val;
+		if (max_val < val) return max_val;
+		return val;
+	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<RT>>(ret, "Value:");
 		::toImGui<Returner<RT>>(min_ret, "Min value:");
 		::toImGui<Returner<RT>>(max_ret, "Max value:");
+	}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const override
+	{
+		if (ret) ret->drawPreview(offset);
+		if (min_ret) min_ret->drawPreview(offset);
+		if (max_ret) max_ret->drawPreview(offset);
 	}
 };
 
@@ -608,7 +818,7 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(SumReturner);
+		return "Sum";
 	}
 
 protected:
@@ -616,11 +826,20 @@ protected:
 	{
 		return (f_ret ? f_ret->getValue() : ValueType<FRT>{}) + (s_ret ? s_ret->getValue() : ValueType<SRT>{});
 	}
+	virtual ValT getMean() const override
+	{
+		return (f_ret ? f_ret->getMeanValue() : ValueType<FRT>{}) + (s_ret ? s_ret->getMeanValue() : ValueType<SRT>{});
+	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<FRT>>(f_ret, "First:");
 		::toImGui<Returner<SRT>>(s_ret, "Second:");
+	}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const override
+	{
+		if (f_ret) f_ret->drawPreview(offset);
+		if (s_ret) s_ret->drawPreview(offset);
 	}
 };
 
@@ -654,7 +873,7 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(DifferenceReturner);
+		return "Difference";
 	}
 
 protected:
@@ -662,11 +881,20 @@ protected:
 	{
 		return (f_ret ? f_ret->getValue() : ValueType<FRT>{}) - (s_ret ? s_ret->getValue() : ValueType<SRT>{});
 	}
+	virtual ValT getMean() const override
+	{
+		return (f_ret ? f_ret->getMeanValue() : ValueType<FRT>{}) - (s_ret ? s_ret->getMeanValue() : ValueType<SRT>{});
+	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<FRT>>(f_ret, "First:");
 		::toImGui<Returner<SRT>>(s_ret, "Second:");
+	}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const override
+	{
+		if (f_ret) f_ret->drawPreview(offset);
+		if (s_ret) s_ret->drawPreview(offset);
 	}
 };
 
@@ -700,7 +928,7 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(ProductReturner);
+		return "Product";
 	}
 
 protected:
@@ -708,11 +936,20 @@ protected:
 	{
 		return (f_ret ? f_ret->getValue() : ValueType<FRT>{}) * (s_ret ? s_ret->getValue() : ValueType<SRT>{});
 	}
+	virtual ValT getMean() const override
+	{
+		return (f_ret ? f_ret->getMeanValue() : ValueType<FRT>{}) * (s_ret ? s_ret->getMeanValue() : ValueType<SRT>{});
+	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<FRT>>(f_ret, "First:");
 		::toImGui<Returner<SRT>>(s_ret, "Second:");
+	}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const override
+	{
+		if (f_ret) f_ret->drawPreview(offset);
+		if (s_ret) s_ret->drawPreview(offset);
 	}
 };
 
@@ -746,7 +983,7 @@ public:
 
 	virtual std::string getName() const override
 	{
-		return TEXT(QuotientReturner);
+		return "Quotient";
 	}
 
 protected:
@@ -754,11 +991,20 @@ protected:
 	{
 		return (f_ret ? f_ret->getValue() : ValueType<FRT>{}) / (s_ret ? s_ret->getValue() : ValueType<SRT>{});
 	}
+	virtual ValT getMean() const override
+	{
+		return (f_ret ? f_ret->getMeanValue() : ValueType<FRT>{}) / (s_ret ? s_ret->getMeanValue() : ValueType<SRT>{});
+	}
 	virtual void toImGuiImpl() override
 	{
 		Returner<RT>::toImGuiImpl();
 		::toImGui<Returner<FRT>>(f_ret, "First:");
 		::toImGui<Returner<SRT>>(s_ret, "Second:");
+	}
+	virtual void drawSubReturnersPreview(sf::Vector2f offset) const override
+	{
+		if (f_ret) f_ret->drawPreview(offset);
+		if (s_ret) s_ret->drawPreview(offset);
 	}
 };
 
@@ -826,7 +1072,7 @@ RetT* getReturnerPointerFromName(const std::string& name)
 	return nonZeroPtr<RetT>(
 		{
 			returnForPrimTypes<RetT, Returner, ConstantReturner, UniformDistributionReturner, RectDistributionReturner, CircleDistributionReturner, DeflectDistributionReturner, GeneratedHeightReturner, NegativeReturner, MinReturner, MaxReturner, ClampReturner>(name),
-			returnForNonPrimTypes<RetT, SumReturner, DifferenceReturner, ProductReturner, QuotientReturner>(name, std::make_integer_sequence<int, ReturnerTypesCount>(), std::make_integer_sequence<int, ReturnerTypesCount>())
+			returnForNonPrimTypes<RetT, SumReturner, DifferenceReturner, ProductReturner, QuotientReturner>(name, std::make_integer_sequence<int, ReturnTypesCount>(), std::make_integer_sequence<int, ReturnTypesCount>())
 		});
 }
 
@@ -902,7 +1148,7 @@ struct ImGuiButtonForNonPrimTypeGenerator
 	void ImGuiButtonForNonPrimType(std::unique_ptr<RetT>& returner, std::integer_sequence<int, types1...>, std::integer_sequence<int, types2...> i2)
 	{
 		(ImGuiButtonForNonPrimTypeW1T<T, ReturnType(types1)>(i2), ...);
-		for (auto& pair : tree_map) if (ImGui::TreeNodeEx(std::format("First type: {}", pair.first).c_str(), ImGuiTreeNodeFlags_SpanAvailWidth))
+		for (auto& pair : tree_map) if (ImGui::TreeNodeEx(std::format("First type: {}", pair.first).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			for (auto& second_pair : pair.second) if (ImGui::SmallButton(std::format("Second type: {}", second_pair.first).c_str())) returner = std::move(second_pair.second);
 			ImGui::TreePop();
@@ -915,6 +1161,134 @@ struct ImGuiButtonForNonPrimTypeGenerator
 
 template<class RetT>
 	requires std::derived_from<RetT, Returner<RetT::RetType>>
+void copyReturner(const std::unique_ptr<RetT>& returner, bool deleted = false)
+{
+	nl::json j;
+	returner->to_json(j);
+	if (!deleted) doodle_jump_clipboard.recent_copies.emplace_front(typeid(Returner<RetT::RetType>), j.dump());
+	else doodle_jump_clipboard.recent_deletions.emplace_front(typeid(Returner<RetT::RetType>), j.dump());
+}
+
+template<class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
+void pasteReturner(std::unique_ptr<RetT>& returner, size_t ind, bool from_deletions = false)
+{
+	nl::json j = nl::json::parse((from_deletions ? doodle_jump_clipboard.recent_deletions : doodle_jump_clipboard.recent_copies)[ind].second);
+	returner = std::unique_ptr<RetT>(getReturnerPointerFromJson<RetT>(j));
+	if (returner) returner->from_json(j);
+	else ImGui::OpenPopup("Paste failed");
+}
+
+template<class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
+void pasteReturnerImGuiButton(std::unique_ptr<RetT>& returner)
+{
+	if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste")) ImGui::OpenPopup("For pasting");
+	if (ImGui::BeginPopup("For pasting"))
+	{
+		static size_t ind = 1;
+		ImGui::InputScalar("No. to paste", ImGuiDataType_U32, &ind);
+		if (ind <= 0) ind = 1;
+		if (ind > std::max(doodle_jump_clipboard.recent_copies.size(), doodle_jump_clipboard.recent_deletions.size())) ind = std::max(doodle_jump_clipboard.recent_copies.size(), doodle_jump_clipboard.recent_deletions.size());
+		if (ind <= doodle_jump_clipboard.recent_copies.size() && ImGui::SmallButton("Paste from recent copies")) pasteReturner<RetT>(returner, ind - 1);
+		if (ind <= doodle_jump_clipboard.recent_deletions.size() && ImGui::SmallButton("Paste from recent deletions")) pasteReturner<RetT>(returner, ind - 1, true);
+		ImGui::EndPopup();
+	}
+	if (ImGui::BeginPopup("Paste failed"))
+	{
+		ImGui::Text("Cannot paste here");
+		ImGui::EndPopup();
+	}
+}
+
+template<class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
+void loadReturnerFromFileImGuiButton(std::unique_ptr<RetT>& returner)
+{
+	if (ImGui::SmallButton("Load from file")) ImGui::OpenPopup("For loading from file");
+	if (ImGui::BeginPopup("For loading from file"))
+	{
+		static std::string file_name, name;
+		ImGui::InputText(".json  File name", &file_name);
+		ImGui::InputText("Returner name", &name);
+		if (ImGui::SmallButton("Load"))
+		{
+			std::ifstream fin(RESOURCES_PATH "Saved generations and returners/" + file_name + ".json");
+			if (fin)
+			{
+				nl::json j;
+				try
+				{
+					fin >> j;
+				}
+				catch (...) {}
+				if (j.contains(name))
+				{
+					RetT* new_ret = getReturnerPointerFromJson<RetT>(j[name]);
+					if (new_ret)
+					{
+						returner = std::unique_ptr<RetT>(new_ret);
+						returner->from_json(j[name]);
+					}
+					else ImGui::OpenPopup("Load failed, no returner");
+				}
+				else ImGui::OpenPopup("Load failed, no name");
+			}
+			else ImGui::OpenPopup("Load failed, no file");
+		}
+		
+		if (ImGui::BeginPopup("Load failed, no returner"))
+		{
+			ImGui::Text("Can't load the specified returner here");
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::BeginPopup("Load failed, no name"))
+		{
+			ImGui::Text("A returner with that name does not exist in that file");
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::BeginPopup("Load failed, no file"))
+		{
+			ImGui::Text("File does not exist");
+			ImGui::EndPopup();
+		}
+
+		ImGui::EndPopup();
+	}
+}
+
+template<class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
+void saveReturnerToFileImGuiButton(const std::unique_ptr<RetT>& returner)
+{
+	if (ImGui::SmallButton("Save to file")) ImGui::OpenPopup("For saving to file");
+	if (ImGui::BeginPopup("For saving to file"))
+	{
+		static std::string file_name, name;
+		ImGui::InputText(".json  File name", &file_name);
+		ImGui::InputText("Returner name", &name);
+		if (ImGui::SmallButton("Save"))
+		{
+			nl::json j;
+			std::fstream file(RESOURCES_PATH "Saved generations and returners/" + file_name + ".json", std::ios_base::in | std::ios_base::out | std::ios_base::app);
+			try
+			{
+				file >> j;
+			}
+			catch (...) {}
+			file.close();
+			returner->to_json(j[name]);
+			file.open(RESOURCES_PATH "Saved generations and returners/" + file_name + ".json", std::ios_base::out | std::ios_base::trunc);
+			file << j;
+		}
+		ImGui::EndPopup();
+	}
+}
+
+template<class RetT>
+	requires std::derived_from<RetT, Returner<RetT::RetType>>
 void toImGui(std::unique_ptr<RetT>& returner, const std::string& format)
 {
 	ImGui::Text(format.c_str());
@@ -922,25 +1296,15 @@ void toImGui(std::unique_ptr<RetT>& returner, const std::string& format)
 	{
 		if (ImGui::BeginPopupContextItem(std::format("For reseting##{}", (uintptr_t)&returner).c_str()))
 		{
-			if (ImGui::SmallButton("Reset to None")) returner.reset();
-			if (ImGui::SmallButton("Copy"))
+			if (ImGui::SmallButton("Reset to None"))
 			{
-				nl::json j;
-				returner->to_json(j);
-				doodle_jump_clipboard = j.dump();
+				copyReturner<RetT>(returner, true);
+				returner.reset();
 			}
-			if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste"))
-			{
-				nl::json j = nl::json::parse(doodle_jump_clipboard);
-				returner = std::unique_ptr<RetT>(getReturnerPointerFromJson<RetT>(j));
-				if (returner) returner->from_json(j);
-				else ImGui::OpenPopup("Paste failed");
-				if (ImGui::BeginPopup("Paste failed"))
-				{
-					ImGui::Text("Cannot paste here");
-					ImGui::EndPopup();
-				}
-			}
+			if (ImGui::SmallButton("Copy")) copyReturner<RetT>(returner);
+			pasteReturnerImGuiButton<RetT>(returner);
+			loadReturnerFromFileImGuiButton<RetT>(returner);
+			saveReturnerToFileImGuiButton<RetT>(returner);
 			ImGui::EndPopup();
 		}
 	}
@@ -948,49 +1312,34 @@ void toImGui(std::unique_ptr<RetT>& returner, const std::string& format)
 	{
 		if (ImGui::BeginPopupContextItem(std::format("For new returner##{}", (uintptr_t)&returner).c_str()))
 		{
-			if (ImGui::SmallButton("Create new")) ImGui::OpenPopup("Choose a type");
-			if (ImGui::BeginPopup("Choose a type"))
-			{
-#define IMGUI_BUTTON_FOR_PRIM_TYPE(x) if constexpr( requires { {std::derived_from<x<RetT::RetType>, RetT>}; }) if(ImGui::SmallButton(#x)) returner = std::unique_ptr<RetT>(new x<RetT::RetType>);
-				IMGUI_BUTTON_FOR_PRIM_TYPE(Returner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(ConstantReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(UniformDistributionReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(RectDistributionReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(CircleDistributionReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(DeflectDistributionReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(GeneratedHeightReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(NegativeReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(MinReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(MaxReturner)
-				IMGUI_BUTTON_FOR_PRIM_TYPE(ClampReturner)
+#define IMGUI_BUTTON_FOR_PRIM_TYPE(x) if constexpr( requires { {std::derived_from<x<RetT::RetType>, RetT>}; }) if(ImGui::SmallButton(x<RetT::RetType>().getName().c_str())) returner = std::unique_ptr<RetT>(new x<RetT::RetType>);
+			IMGUI_BUTTON_FOR_PRIM_TYPE(ConstantReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(UniformDistributionReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(RectDistributionReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(CircleDistributionReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(DeflectDistributionReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(GeneratedHeightReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(NegativeReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(MinReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(MaxReturner)
+			IMGUI_BUTTON_FOR_PRIM_TYPE(ClampReturner)
 #undef IMGUI_BUTTON_FOR_PRIM_TYPE
 #define IMGUI_TREE_FOR_NON_PRIM_TYPE(x)\
-if(ImGui::TreeNode(#x))\
+if(ImGui::TreeNode(x<FloatValue, FloatValue, FloatValue>().getName().c_str()))\
 {\
-	ImGuiButtonForNonPrimTypeGenerator<RetT>{}.ImGuiButtonForNonPrimType<x>(returner, std::make_integer_sequence<int, ReturnerTypesCount>(), std::make_integer_sequence<int, ReturnerTypesCount>());\
+	ImGuiButtonForNonPrimTypeGenerator<RetT>{}.ImGuiButtonForNonPrimType<x>(returner, std::make_integer_sequence<int, ReturnTypesCount>(), std::make_integer_sequence<int, ReturnTypesCount>());\
 	ImGui::TreePop();\
 }
 
-				IMGUI_TREE_FOR_NON_PRIM_TYPE(SumReturner)
-				IMGUI_TREE_FOR_NON_PRIM_TYPE(DifferenceReturner)
-				IMGUI_TREE_FOR_NON_PRIM_TYPE(ProductReturner)
-				IMGUI_TREE_FOR_NON_PRIM_TYPE(QuotientReturner)
+			IMGUI_TREE_FOR_NON_PRIM_TYPE(SumReturner)
+			IMGUI_TREE_FOR_NON_PRIM_TYPE(DifferenceReturner)
+			IMGUI_TREE_FOR_NON_PRIM_TYPE(ProductReturner)
+			IMGUI_TREE_FOR_NON_PRIM_TYPE(QuotientReturner)
 #undef IMGUI_TREE_FOR_NON_PRIM_TYPE
-				ImGui::EndPopup();
-			}
 
-			if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste"))
-			{
-				nl::json j = nl::json::parse(doodle_jump_clipboard);
-				returner = std::unique_ptr<RetT>(getReturnerPointerFromJson<RetT>(j));
-				if (returner) returner->from_json(j);
-				else ImGui::OpenPopup("Paste failed");
-				if (ImGui::BeginPopup("Paste failed"))
-				{
-					ImGui::Text("Cannot paste here");
-					ImGui::EndPopup();
-				}
-			}
+			ImGui::Separator();
+			pasteReturnerImGuiButton<RetT>(returner);
+			loadReturnerFromFileImGuiButton<RetT>(returner);
 			ImGui::EndPopup();
 
 		}

@@ -5,36 +5,9 @@
     },
     "ib_texture_name": "background",
     "level_generator": {
-        "generation": {
-            "generations": [
-                {
-                    "generation": null,
-                    "relative_probility_returner": {
-                        "first_returner": {
-                            "name": "class ConstantReturner<6>",
-                            "value": 456.0
-                        },
-                        "name": "class ProductReturner<16,6,13>",
-                        "second_returner": {
-                            "max_value": 789.0,
-                            "min_value": 456.0,
-                            "name": "class UniformDistributionReturner<13>"
-                        }
-                    }
-                },
-                {
-                    "generation": null,
-                    "relative_probility_returner": null
-                },
-                {
-                    "generation": null,
-                    "relative_probility_returner": null
-                }
-            ],
-            "name": "PickOneGeneration"
-        },
+        "generation": null,
         "generation_settings": {
-            "repeate_count": 1
+            "repeate_count": 456
         }
     },
     "scene": {

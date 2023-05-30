@@ -10,11 +10,11 @@
 Doodle::Doodle(sf::Vector2f starting_pos)
 {
 	setPosition(starting_pos);
-	m_body_normal_exhind = m_body.addExhibit({ {0, 0, 80, 80}, {40, 40} });
-	m_body_shooting_exhind = m_body.addExhibit({ {80, 0, 80, 80}, {40, 40} });
-	m_feet_normal_exhind = m_feet.addExhibit({ {0, 80, 80, 20}, {40, 10} });
-	m_feet_shooting_exhind = m_feet.addExhibit({ {80, 80, 80, 20}, {40, 10} });
-	m_nose_exhind = m_nose.addExhibit({ {160, 0, 40, 40},{ 20, 20 } });
+	m_body_normal_exhind = m_body.addExhibit({ (sf::FloatRect)global_sprites["doodle_body_right"].texture_rect, {40, 40}});
+	m_body_shooting_exhind = m_body.addExhibit({ (sf::FloatRect)global_sprites["doodle_body_up"].texture_rect, {40, 40} });
+	m_feet_normal_exhind = m_feet.addExhibit({ (sf::FloatRect)global_sprites["doodle_feet_right"].texture_rect, {40, 10} });
+	m_feet_shooting_exhind = m_feet.addExhibit({ (sf::FloatRect)global_sprites["doodle_feet_up"].texture_rect, {40, 10} });
+	m_nose_exhind = m_nose.addExhibit({ (sf::FloatRect)global_sprites["doodle_nose"].texture_rect, { 20, 20 } });
 
 	m_body.set(m_body_normal_exhind);
 	m_feet.set(m_feet_normal_exhind);
@@ -25,7 +25,7 @@ Doodle::Doodle(sf::Vector2f starting_pos)
 	m_head_bump_star.setOrigin(12, 12);
 	m_head_bump_star.setScale(m_texture_scale);
 
-	m_bullet_sprite.setTextureRect({ 178, 54, 22, 22 });
+	m_bullet_sprite.setTextureRect(global_sprites["doodle_bullet"].texture_rect);
 	m_bullet_sprite.setScale(m_texture_scale);
 	m_bullet_sprite.setOrigin(11, 11);
 }
@@ -135,11 +135,6 @@ sf::FloatRect Doodle::getArea() const
 	return m_area;
 }
 
-void Doodle::setTexture(sf::Texture* texture_ptr)
-{
-	if(texture_ptr) m_texture = texture_ptr;
-}
-
 void Doodle::dieHeadBump()
 {
 	die();
@@ -222,6 +217,11 @@ bool Doodle::hasShield() const
 bool Doodle::isDead() const
 {
 	return m_is_dead;
+}
+
+bool Doodle::isCompletelyDead() const
+{
+	return m_current_texture_scale == sf::Vector2f{ 0, 0 } || getPosition().y > getArea().top + getArea().height + 50;
 }
 
 sf::Vector2f Doodle::getVelocity() const

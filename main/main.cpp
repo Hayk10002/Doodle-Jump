@@ -46,7 +46,7 @@ int main()
 
 	//create the level
 	Level level(window);
-	level.loadFromFile(RESOURCES_PATH"level.json");
+	size_t current_level = 0;
 	
 	sf::Font default_font;
 	default_font.loadFromFile(RESOURCES_PATH"mistal.ttf");
@@ -118,6 +118,18 @@ int main()
 		level.doodle.setPosition(position);
 		ImGui::Text("Area: {%f, %f, %f, %f}", level.doodle.getArea().left, level.doodle.getArea().top, level.doodle.getArea().width, level.doodle.getArea().height);
 		ImGui::Text("Is doodle dead: %d", level.doodle.isDead());
+		ImGui::Text("Is doodle completely dead: %d", level.doodle.isCompletelyDead());
+
+		ImGui::Text("Level no.");
+		ImGui::SameLine();
+		ImGui::InputScalar("##Level no", ImGuiDataType_U64, &current_level);
+		ImGui::SameLine();
+		if (ImGui::SmallButton("Play"))
+		{
+			level.loadFromFile(std::format(RESOURCES_PATH"Levels/level{}.json", current_level));
+			level.refresh();
+		}
+		
 		//if (ImGui::IsWindowFocused())  dt = sf::Time::Zero;
 		ImGui::End();
 

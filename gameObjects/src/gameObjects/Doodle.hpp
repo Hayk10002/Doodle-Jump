@@ -46,7 +46,6 @@ public:
 	void updateTiles(Tiles& tiles);
 	void updateItems(Items& items);
 	void updateMonsters(Monsters& monsters);
-	void setTexture(sf::Texture* texture_ptr);
 
 	void dieHeadBump();
 	void dieShrink(sf::Vector2f shrinking_pos, sf::Time duration = sf::seconds(0.5), float rotation_speed = 0);
@@ -99,12 +98,11 @@ private:
 	sf::Vector2f m_velocity{0, 0};
 	sf::Vector2f m_gravity{0, 1200};
 	sf::Time m_existing_time{};
-	sf::Texture* m_texture{ &global_textures["doodle"] };
-	mutable sw::GallerySprite m_body{ *m_texture };
+	mutable sw::GallerySprite m_body{ global_textures["doodle"] };
 	size_t m_body_normal_exhind, m_body_shooting_exhind;
-	mutable sw::GallerySprite m_feet{ *m_texture };
+	mutable sw::GallerySprite m_feet{ global_textures["doodle"] };
 	size_t m_feet_normal_exhind, m_feet_shooting_exhind;
-	mutable sw::GallerySprite m_nose{ *m_texture };
+	mutable sw::GallerySprite m_nose{ global_textures["doodle"] };
 	size_t m_nose_exhind;
 	BodyStatus m_body_status{ Right };
 	sf::Vector2f m_body_collision_box_size{ 60, 70 };
@@ -140,7 +138,7 @@ private:
 	sf::Vector2f m_head_bump_stars_offset{0, -30};
 	sf::Vector2f m_head_bump_stars_rotating_boundaries{ 48, 25 };
 	sf::Time m_head_bump_stars_rotation_time{ sf::seconds(0.5) };
-	mutable sf::Sprite m_head_bump_star{ *m_texture, {176, 76, 24, 24} };
+	mutable sf::Sprite m_head_bump_star{ global_sprites["doodle_star"].getTexture(), global_sprites["doodle_star"].texture_rect };
 	void animateHeadBumpStars(size_t index) const;
 
 	bool m_is_shrinking{ false };
@@ -151,7 +149,7 @@ private:
 	void die();
 
 	std::deque<Bullet> m_bullets;
-	sf::Sprite m_bullet_sprite{ *m_texture };
+	sf::Sprite m_bullet_sprite{ global_sprites["doodle_bullet"].getTexture() };
 	float m_bullet_speed = 2000;
 
 	Shield* m_shield{ nullptr };

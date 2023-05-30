@@ -19,6 +19,11 @@ namespace utils
 	{
 		return ImVec2(vec.x, vec.y);
 	}
+	template<class T>
+	sf::Vector2<T> yFlipped(sf::Vector2<T> vec)
+	{
+		return { vec.x, -vec.y };
+	} 
 
 	float getYFrom5Nums(float x1, float y1, float x2, float y2, float x);
 	float getYFrom5NumsClamped(float x1, float y1, float x2, float y2, float x);

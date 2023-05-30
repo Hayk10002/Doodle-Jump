@@ -4,14 +4,21 @@
 #include <string>
 #include <functional>
 #include <deque>
+#include <utility>
+#include <typeinfo>
+#include <fstream>
 
+#include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include <nlohmann/json.hpp>
 #include <SFML/Graphics.hpp>
+
 #include <gameObjects/Tiles.hpp>
 #include <gameObjects/Items.hpp>
 #include <gameObjects/Monsters.hpp>
 #include <common/Utils.hpp>
 #include <common/Returners.hpp>
+#include <DoodleJumpConfig.hpp>
 
 
 class Level;
@@ -25,9 +32,12 @@ protected:
 	virtual float generateImpl(float generated_height, float left, float right);
 	virtual void toImGuiImpl();
 
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
+	virtual float drawSubGenerationsPreview(sf::Vector2f offset) const;
+
 public:
 	Generation();
-	float generate(float generated_height, float left, float right); // returns the height if the generation
+	float generate(float generated_height, float left, float right); // returns the height of the generation
 	static void setCurrentLevelForGenerating(Level* level);
 	static Level* getCurrentLevelForGenerating();
 	
@@ -36,6 +46,11 @@ public:
 	virtual void to_json(nl::json& j) const;
 	virtual void from_json(const nl::json& j);
 	void toImGui();
+
+	bool preview = true;
+	virtual bool canPreview() const;
+	
+	float drawPreview(sf::Vector2f offset = sf::Vector2f{}) const;
 };
 
 class LevelGenerator
@@ -89,6 +104,7 @@ private:
 
 public:
 	LevelGenerator();
+	void reset();
 	void update();
 	template <std::derived_from<Generation> T>
 	void setGeneration(T&& gen)
@@ -124,11 +140,15 @@ public:
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
+	
+	virtual bool canPreview() const override;
 
 protected:
 	float generateImpl(float generated_height, float left, float right) override;
 	virtual void toImGuiImpl() override;
 	virtual Tile* getTile();
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class ItemGeneration : public Generation
@@ -142,10 +162,14 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	float generateImpl(float, float, float) override;
 	virtual void toImGuiImpl() override;
 	virtual Item* getItem();
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class MonsterGeneration : public Generation
@@ -158,10 +182,14 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	float generateImpl(float generated_height, float, float) override;
 	virtual void toImGuiImpl() override;
 	virtual Monster* getMonster();
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 
@@ -174,8 +202,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Tile* getTile() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class HorizontalSlidingTileGeneration : public TileGeneration
@@ -190,9 +222,13 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Tile* getTile() override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class VerticalSlidingTileGeneration : public TileGeneration
@@ -207,9 +243,13 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Tile* getTile() override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class DecayedTileGeneration : public TileGeneration
@@ -224,9 +264,13 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Tile* getTile() override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class BombTileGeneration : public TileGeneration
@@ -239,9 +283,13 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Tile* getTile() override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class OneTimeTileGeneration : public TileGeneration
@@ -252,29 +300,37 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 	
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Tile* getTile() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class TeleportTileGeneration : public TileGeneration
 {
 public:
-	std::deque<std::unique_ptr<Returner<Offset>>> offset_returners{};
+	std::deque<std::unique_ptr<Returner<Position>>> offset_returners{};
 
 	virtual std::string getName() const override;
 
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Tile* getTile() override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class ClusterTileGeneration : public TileGeneration
 {
 public:
-	std::deque<std::unique_ptr<Returner<Offset>>> offset_returners{};
+	std::deque<std::unique_ptr<Returner<Position>>> offset_returners{};
 	ClusterTile::Id id{};
 
 	virtual std::string getName() const override;
@@ -282,9 +338,13 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Tile* getTile() override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 
@@ -297,8 +357,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Item* getItem() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class TrampolineGeneration: public ItemGeneration
@@ -309,8 +373,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Item* getItem() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class PropellerHatGeneration : public ItemGeneration
@@ -321,8 +389,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Item* getItem() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class JetpackGeneration : public ItemGeneration
@@ -333,8 +405,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Item* getItem() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class SpringShoesGeneration : public ItemGeneration
@@ -347,9 +423,13 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
  protected:
 	virtual Item* getItem() override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 
@@ -366,10 +446,13 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
 	virtual void toImGuiImpl() override;
 
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class CamronMonsterGeneration : public MonsterGeneration
@@ -380,8 +463,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class PurpleSpiderMonsterGeneration : public MonsterGeneration
@@ -392,8 +479,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
  
 class LargeBlueMonsterGeneration : public MonsterGeneration
@@ -404,8 +495,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class UFOGeneration : public MonsterGeneration
@@ -416,8 +511,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class BlackHoleGeneration : public MonsterGeneration
@@ -428,8 +527,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class OvalGreenMonsterGeneration : public MonsterGeneration
@@ -440,8 +543,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class FlatGreenMonsterGeneration : public MonsterGeneration
@@ -452,8 +559,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class LargeGreenMonsterGeneration : public MonsterGeneration
@@ -464,8 +575,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class BlueWingedMonsterGeneration : public MonsterGeneration
@@ -476,8 +591,12 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 class TheTerrifyingMonsterGeneration : public MonsterGeneration
@@ -492,10 +611,13 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual Monster* getMonster() override;
 	virtual void toImGuiImpl() override;
 
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
 };
 
 
@@ -511,9 +633,15 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual float generateImpl(float generated_height, float left, float right) override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
+	
+	virtual float drawSubGenerationsPreview(sf::Vector2f offset) const;
 };
 
 class GroupGeneration : public Generation
@@ -526,9 +654,15 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual float generateImpl(float generated_height, float left, float right) override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
+	
+	virtual float drawSubGenerationsPreview(sf::Vector2f offset) const;
 };
 
 class ConsecutiveGeneration : public Generation
@@ -541,9 +675,15 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual float generateImpl(float generated_height, float left, float right) override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
+	
+	virtual float drawSubGenerationsPreview(sf::Vector2f offset) const;
 };
 
 class PickOneGeneration : public Generation
@@ -564,15 +704,21 @@ public:
 	virtual void to_json(nl::json& j) const override;
 	virtual void from_json(const nl::json& j) override;
 
+	virtual bool canPreview() const override;
+
 protected:
 	virtual float generateImpl(float generated_height, float left, float right) override;
 	virtual void toImGuiImpl() override;
+
+	virtual float drawPreviewImpl(sf::Vector2f offset) const;
+	
+	virtual float drawSubGenerationsPreview(sf::Vector2f offset) const;
 };
 
 template <std::derived_from<Generation> T>
 T* getGenerationPointerFromName(const std::string& name)
 {
-#define RETURN_FOR_TYPE(x) if constexpr (std::derived_from<x, T>) if(name == #x) return new x;
+#define RETURN_FOR_TYPE(x) if constexpr (std::derived_from<x, T>) if(name == x().getName()) return new x;
 	RETURN_FOR_TYPE(Generation);
 	RETURN_FOR_TYPE(TileGeneration);
 	RETURN_FOR_TYPE(ItemGeneration);
@@ -642,6 +788,129 @@ namespace nlohmann
 }
 
 template <std::derived_from<Generation> T>
+void copyGeneration(const std::unique_ptr<T>& generation, bool deleted = false)
+{
+	nl::json j;
+	generation->to_json(j);
+	if (!deleted) doodle_jump_clipboard.recent_copies.emplace_front(typeid(Generation), j.dump());
+	else doodle_jump_clipboard.recent_deletions.emplace_front(typeid(Generation), j.dump());
+}
+
+template <std::derived_from<Generation> T>
+void pasteGeneration(std::unique_ptr<T>& generation, size_t ind, bool from_deletions = false)
+{
+	nl::json j = nl::json::parse((from_deletions ? doodle_jump_clipboard.recent_deletions : doodle_jump_clipboard.recent_copies)[ind].second);
+	generation = std::unique_ptr<T>(getGenerationPointerFromJson<T>(j));
+	if (generation) generation->from_json(j);
+	else ImGui::OpenPopup("Paste failed");
+}
+
+template <std::derived_from<Generation> T>
+void pasteGenerationImGuiButton(std::unique_ptr<T>& generation)
+{
+	if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste")) ImGui::OpenPopup("For pasting");
+	if (ImGui::BeginPopup("For pasting"))
+	{
+		static size_t ind = 1;
+		ImGui::InputScalar("No. to paste", ImGuiDataType_U32, &ind);
+		if (ind <= 0) ind = 1;
+		if (ind > std::max(doodle_jump_clipboard.recent_copies.size(), doodle_jump_clipboard.recent_deletions.size())) ind = std::max(doodle_jump_clipboard.recent_copies.size(), doodle_jump_clipboard.recent_deletions.size());
+		if (ind <= doodle_jump_clipboard.recent_copies.size() && ImGui::SmallButton("Paste from recent copies")) pasteGeneration<T>(generation, ind - 1);
+		if (ind <= doodle_jump_clipboard.recent_deletions.size() && ImGui::SmallButton("Paste from recent deletions")) pasteGeneration<T>(generation, ind - 1, true);
+		ImGui::EndPopup();
+	}
+	if (ImGui::BeginPopup("Paste failed"))
+	{
+		ImGui::Text("Cannot paste here");
+		ImGui::EndPopup();
+	}
+}
+
+template <std::derived_from<Generation> T>
+void loadGenerationFromFileImGuiButton(std::unique_ptr<T>& generation)
+{
+	if (ImGui::SmallButton("Load from file")) ImGui::OpenPopup("For loading from file");
+	if (ImGui::BeginPopup("For loading from file"))
+	{
+		static std::string file_name, name;
+		ImGui::InputText(".json  File name", &file_name);
+		ImGui::InputText("Generation name", &name);
+		if (ImGui::SmallButton("Load"))
+		{
+			std::ifstream fin(RESOURCES_PATH "Saved generations and returners/" + file_name + ".json");
+			if (fin)
+			{
+				nl::json j;
+				try
+				{
+					fin >> j;
+				}
+				catch (...) {}
+				if (j.contains(name))
+				{
+					T* new_gen = getGenerationPointerFromJson<T>(j[name]);
+					if (new_gen)
+					{
+						generation = std::unique_ptr<T>(new_gen);
+						generation->from_json(j[name]);
+					}
+					else ImGui::OpenPopup("Load failed, no generation");
+				}
+				else ImGui::OpenPopup("Load failed, no name");
+			}
+			else ImGui::OpenPopup("Load failed, no file");
+		}
+		
+		if (ImGui::BeginPopup("Load failed, no generation"))
+		{
+			ImGui::Text("Can't load the specified generation here");
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::BeginPopup("Load failed, no name"))
+		{
+			ImGui::Text("A generation with that name does not exist in that file");
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::BeginPopup("Load failed, no file"))
+		{
+			ImGui::Text("File does not exist");
+			ImGui::EndPopup();
+		}
+
+		ImGui::EndPopup();
+	}
+}
+
+template <std::derived_from<Generation> T>
+void saveGenerationToFileImGuiButton(const std::unique_ptr<T>& generation)
+{
+	if (ImGui::SmallButton("Save to file")) ImGui::OpenPopup("For saving to file");
+	if (ImGui::BeginPopup("For saving to file"))
+	{
+		static std::string file_name, name;
+		ImGui::InputText(".json  File name", &file_name);
+		ImGui::InputText("Generation name", &name);
+		if (ImGui::SmallButton("Save"))
+		{
+			nl::json j;
+			std::fstream file(RESOURCES_PATH "Saved generations and returners/" + file_name + ".json", std::ios_base::in | std::ios_base::out | std::ios_base::app);
+			try
+			{
+				file >> j;
+			}
+			catch (...) {}
+			file.close();
+			generation->to_json(j[name]);
+			file.open(RESOURCES_PATH "Saved generations and returners/" + file_name + ".json", std::ios_base::out | std::ios_base::trunc);
+			file << j;
+		}
+		ImGui::EndPopup();
+	}
+}
+
+template <std::derived_from<Generation> T>
 void toImGui(std::unique_ptr<T>& generation, const std::string& format)
 {
 	ImGui::Text(format.c_str()); 
@@ -649,25 +918,15 @@ void toImGui(std::unique_ptr<T>& generation, const std::string& format)
 	{
 		if (ImGui::BeginPopupContextItem(std::format("For reseting##{}", (uintptr_t)&generation).c_str()))
 		{
-			if (ImGui::SmallButton("Reset to None")) generation.reset();
-			if (ImGui::SmallButton("Copy"))
+			if (ImGui::SmallButton("Reset to None"))
 			{
-				nl::json j;
-				generation->to_json(j);
-				doodle_jump_clipboard = j.dump();
+				copyGeneration<T>(generation, true);
+				generation.reset();
 			}
-			if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste"))
-			{
-				nl::json j = nl::json::parse(doodle_jump_clipboard);
-				generation = std::unique_ptr<T>(getGenerationPointerFromJson<T>(j));
-				if (generation) generation->from_json(j);
-				else ImGui::OpenPopup("Paste failed");
-				if (ImGui::BeginPopup("Paste failed"))
-				{
-					ImGui::Text("Cannot paste here");
-					ImGui::EndPopup();
-				}
-			}
+			if (ImGui::SmallButton("Copy")) copyGeneration<T>(generation);
+			pasteGenerationImGuiButton<T>(generation);
+			loadGenerationFromFileImGuiButton<T>(generation);
+			saveGenerationToFileImGuiButton<T>(generation);
 			ImGui::EndPopup();
 		}
 	}
@@ -675,14 +934,9 @@ void toImGui(std::unique_ptr<T>& generation, const std::string& format)
 	{
 		if (ImGui::BeginPopupContextItem(std::format("For new generation##{}", (uintptr_t)&generation).c_str()))
 		{
-			if (ImGui::SmallButton("Create new")) ImGui::OpenPopup("Choose a type");
-			if (ImGui::BeginPopup("Choose a type"))
+#define IMGUI_BUTTON_FOR_TYPE(x) if constexpr (std::derived_from<x, T>) if(ImGui::SmallButton(x().getName().c_str())) generation = std::unique_ptr<T>(new x);
+			if (ImGui::TreeNodeEx("Tiles", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-#define IMGUI_BUTTON_FOR_TYPE(x) if constexpr (std::derived_from<x, T>) if(ImGui::SmallButton(#x)) generation = std::unique_ptr<T>(new x);
-				IMGUI_BUTTON_FOR_TYPE(Generation);
-				IMGUI_BUTTON_FOR_TYPE(TileGeneration);
-				IMGUI_BUTTON_FOR_TYPE(ItemGeneration);
-				IMGUI_BUTTON_FOR_TYPE(MonsterGeneration);
 				IMGUI_BUTTON_FOR_TYPE(NormalTileGeneration);
 				IMGUI_BUTTON_FOR_TYPE(HorizontalSlidingTileGeneration);
 				IMGUI_BUTTON_FOR_TYPE(VerticalSlidingTileGeneration);
@@ -691,11 +945,21 @@ void toImGui(std::unique_ptr<T>& generation, const std::string& format)
 				IMGUI_BUTTON_FOR_TYPE(OneTimeTileGeneration);
 				IMGUI_BUTTON_FOR_TYPE(TeleportTileGeneration);
 				IMGUI_BUTTON_FOR_TYPE(ClusterTileGeneration);
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNodeEx("Items", ImGuiTreeNodeFlags_DefaultOpen))
+			{
 				IMGUI_BUTTON_FOR_TYPE(SpringGeneration);
 				IMGUI_BUTTON_FOR_TYPE(TrampolineGeneration);
 				IMGUI_BUTTON_FOR_TYPE(PropellerHatGeneration);
 				IMGUI_BUTTON_FOR_TYPE(JetpackGeneration);
 				IMGUI_BUTTON_FOR_TYPE(SpringShoesGeneration);
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNodeEx("Monsters", ImGuiTreeNodeFlags_DefaultOpen))
+			{
 				IMGUI_BUTTON_FOR_TYPE(BlueOneEyedMonsterGeneration);
 				IMGUI_BUTTON_FOR_TYPE(CamronMonsterGeneration);
 				IMGUI_BUTTON_FOR_TYPE(PurpleSpiderMonsterGeneration);
@@ -707,28 +971,18 @@ void toImGui(std::unique_ptr<T>& generation, const std::string& format)
 				IMGUI_BUTTON_FOR_TYPE(LargeGreenMonsterGeneration);
 				IMGUI_BUTTON_FOR_TYPE(BlueWingedMonsterGeneration);
 				IMGUI_BUTTON_FOR_TYPE(TheTerrifyingMonsterGeneration);
-				IMGUI_BUTTON_FOR_TYPE(GenerationWithChance);
-				IMGUI_BUTTON_FOR_TYPE(GroupGeneration);
-				IMGUI_BUTTON_FOR_TYPE(ConsecutiveGeneration);
-				IMGUI_BUTTON_FOR_TYPE(PickOneGeneration);
+				ImGui::TreePop();
+			}
+
+			IMGUI_BUTTON_FOR_TYPE(GenerationWithChance);
+			IMGUI_BUTTON_FOR_TYPE(GroupGeneration);
+			IMGUI_BUTTON_FOR_TYPE(ConsecutiveGeneration);
+			IMGUI_BUTTON_FOR_TYPE(PickOneGeneration);
 
 #undef IMGUI_BUTTON_FOR_TYPE
-				ImGui::EndPopup();
-			}
-
-			if (!doodle_jump_clipboard.empty() && ImGui::SmallButton("Paste"))
-			{
-				nl::json j = nl::json::parse(doodle_jump_clipboard);
-				generation = std::unique_ptr<T>(getGenerationPointerFromJson<T>(j));
-				if (generation) generation->from_json(j);
-				else ImGui::OpenPopup("Paste failed");
-				if (ImGui::BeginPopup("Paste failed"))
-				{
-					ImGui::Text("Cannot paste here");
-					ImGui::EndPopup();
-				}
-			}
-
+			ImGui::Separator();
+			pasteGenerationImGuiButton<T>(generation);
+			loadGenerationFromFileImGuiButton<T>(generation);
 			ImGui::EndPopup();
 		}
 	}

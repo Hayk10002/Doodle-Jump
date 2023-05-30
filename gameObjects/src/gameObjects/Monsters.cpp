@@ -79,11 +79,11 @@ void Monster::draw(sf::RenderTarget& target, sf::RenderStates states) const
 }
 
 BlueOneEyedMonster::BlueOneEyedMonster(float speed) :
-	Monster(&global_textures["monsters"]),
+	Monster(&global_sprites["monsters_blue_one_eyed"].getTexture()),
 	m_speed(speed)
 {
 	m_collision_box_size = sf::Vector2f{ 74, 78 } *m_texture_scale;
-	setTextureRect({ 0, 0, 74, 98 });
+	setTextureRect(global_sprites["monsters_blue_one_eyed"].texture_rect);
 	setOrigin({ 37, 49 });
 	setScale(m_texture_scale, m_texture_scale);
 }
@@ -127,10 +127,10 @@ void BlueOneEyedMonster::updateMovingLocation(float left, float right)
 }
 
 CamronMonster::CamronMonster() :
-	Monster(&global_textures["monsters"])
+	Monster(&global_sprites["monsters_camron"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{76, 52} * m_texture_scale;
-	setTextureRect({ 184, 0, 92, 72 });
+	setTextureRect(global_sprites["monsters_camron"].texture_rect);
 	setOrigin({ 44, 35 });
 	setScale(m_texture_scale, m_texture_scale);
 }
@@ -150,10 +150,10 @@ void CamronMonster::update(sf::Time dt)
 }
 
 PurpleSpiderMonster::PurpleSpiderMonster() :
-	Monster(&global_textures["monsters"])
+	Monster(&global_sprites["monsters_purple_spider"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 70, 110 } *m_texture_scale;
-	setTextureRect({ 74, 0, 110, 98 });
+	setTextureRect(global_sprites["monsters_purple_spider"].texture_rect);
 	setOrigin({ 55, 49 });
 	setScale(m_texture_scale, m_texture_scale);
 }
@@ -173,10 +173,10 @@ void PurpleSpiderMonster::update(sf::Time dt)
 }
 
 LargeBlueMonster::LargeBlueMonster():
-	Monster(&global_textures["monsters"])
+	Monster(&global_sprites["monsters_large_blue"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 130, 106 } *m_texture_scale;
-	setTextureRect({ 432, 0, 170, 106 });
+	setTextureRect(global_sprites["monsters_large_blue"].texture_rect);
 	setOrigin(85, 106);
 	setScale(m_texture_scale, m_texture_scale);
 }
@@ -197,14 +197,14 @@ void LargeBlueMonster::update(sf::Time dt)
 }
 
 UFO::UFO() :
-	Monster(&global_textures["monsters"]),
-	m_light(global_textures["monsters"])
+	Monster(&global_sprites["monsters_ufo_0"].getTexture()),
+	m_light(global_sprites["monsters_ufo_0"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 160, 240 } *m_texture_scale;
-	setTextureRect({ 276, 0, 156, 68 });
+	setTextureRect(global_sprites["monsters_ufo_0"].texture_rect);
 	setOrigin({ 78, 34 });
 	setScale(m_texture_scale, m_texture_scale);
-	m_light.setTextureRect({ 0, 98, 160, 200 });
+	m_light.setTextureRect(global_sprites["monsters_ufo_1"].texture_rect);
 	m_light.setOrigin(80, 0);
 	m_light.setScale(m_texture_scale, m_texture_scale);
 	setDoodleJumpCallback([this](sf::FloatRect doodle_feet)
@@ -278,10 +278,10 @@ void UFO::draw(sf::RenderTarget& target, sf::RenderStates states) const
 }
 
 BlackHole::BlackHole() :
-	Monster(&global_textures["monsters"])
+	Monster(&global_sprites["monsters_black_hole"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 110, 90 } *m_texture_scale;
-	setTextureRect({160, 98, 140, 130});
+	setTextureRect(global_sprites["monsters_black_hole"].texture_rect);
 	setOrigin({ 70, 65 });
 	setScale(m_texture_scale, m_texture_scale);
 	setDoodleJumpCallback([](sf::FloatRect) {return false; });
@@ -311,17 +311,15 @@ void BlackHole::draw(sf::RenderTarget& target, sf::RenderStates states) const
 }
 
 OvalGreenMonster::OvalGreenMonster():
-	Monster(&global_textures["monsters"]),
-	m_animations(new thor::AnimationMap<sf::Sprite, std::string>()),
-	m_animator(*m_animations)
+	Monster(&global_sprites["monsters_oval_green_0"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 92, 168 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 300, 106, 124, 168 }, { 62, 168 });
+	default_animation.addFrame(1, global_sprites["monsters_oval_green_0"].texture_rect, { 62, 168 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation hurting_animation;
-	hurting_animation.addFrame(1, { 424, 106, 124, 168 }, { 62, 168 });
+	hurting_animation.addFrame(1, global_sprites["monsters_oval_green_1"].texture_rect, { 62, 168 });
 	m_animations->addAnimation("hurting", hurting_animation, sf::seconds(0.1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -352,17 +350,15 @@ bool OvalGreenMonster::getShooted(const Bullet& bullet)
 }
 
 FlatGreenMonster::FlatGreenMonster() :
-	Monster(&global_textures["monsters"]),
-	m_animations(new thor::AnimationMap<sf::Sprite, std::string>()),
-	m_animator(*m_animations)
+	Monster(&global_sprites["monsters_flat_green_0"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 182, 48 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 602, 0, 182, 62 }, { 91, 62 });
+	default_animation.addFrame(1, global_sprites["monsters_flat_green_0"].texture_rect, { 91, 62 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation hurting_animation;
-	hurting_animation.addFrame(1, { 602, 62, 182, 62 }, { 91, 62 });
+	hurting_animation.addFrame(1, global_sprites["monsters_flat_green_1"].texture_rect, { 91, 62 });
 	m_animations->addAnimation("hurting", hurting_animation, sf::seconds(0.1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -392,23 +388,21 @@ bool FlatGreenMonster::getShooted(const Bullet& bullet)
 }
 
 LargeGreenMonster::LargeGreenMonster() :
-	Monster(&global_textures["monsters"]),
-	m_animations(new thor::AnimationMap<sf::Sprite, std::string>()),
-	m_animator(*m_animations)
+	Monster(&global_sprites["monsters_large_green_0"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 150, 96 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 298, 162, 102 }, { 81, 102 });
+	default_animation.addFrame(1, global_sprites["monsters_large_green_0"].texture_rect, { 81, 102 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(1));
 	thor::FrameAnimation hurting_animation;
-	hurting_animation.addFrame(1, { 162, 298, 162, 102 }, { 81, 102 });
-	hurting_animation.addFrame(1, { 324, 298, 162, 116 }, { 81, 102 });
+	hurting_animation.addFrame(1, global_sprites["monsters_large_green_1"].texture_rect, { 81, 102 });
+	hurting_animation.addFrame(1, global_sprites["monsters_large_green_2"].texture_rect, { 81, 102 });
 	m_animations->addAnimation("hurting", hurting_animation, sf::seconds(0.3));
 	thor::FrameAnimation dead_animation;
-	dead_animation.addFrame(1, { 162, 298, 162, 102 }, { 81, 102 });
-	dead_animation.addFrame(1, { 486, 298, 162, 120 }, { 81, 102 });
-	dead_animation.addFrame(1, { 648, 298, 162, 120 }, { 81, 102 });
+	dead_animation.addFrame(1, global_sprites["monsters_large_green_1"].texture_rect, { 81, 102 });
+	dead_animation.addFrame(1, global_sprites["monsters_large_green_3"].texture_rect, { 81, 102 });
+	dead_animation.addFrame(1, global_sprites["monsters_large_green_4"].texture_rect, { 81, 102 });
 	m_animations->addAnimation("dead", dead_animation, sf::seconds(0.3));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -435,21 +429,19 @@ bool LargeGreenMonster::getShooted(const Bullet& bullet)
 }
 
 BlueWingedMonster::BlueWingedMonster() :
-	Monster(&global_textures["monsters"]),
-	m_animations(new thor::AnimationMap<sf::Sprite, std::string>()),
-	m_animator(*m_animations)
+	Monster(&global_sprites["monsters_blue_winged_0"].getTexture())
 {
 	m_collision_box_size = sf::Vector2f{ 156, 68 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 0, 420, 156, 88 }, { 78, 44 });
-	default_animation.addFrame(1, { 156, 420, 156, 88 }, { 78, 44 });
-	default_animation.addFrame(1, { 312, 420, 156, 88 }, { 78, 44 });
-	default_animation.addFrame(1, { 468, 420, 156, 88 }, { 78, 44 });
-	default_animation.addFrame(1, { 624, 420, 156, 88 }, { 78, 44 });
-	default_animation.addFrame(1, { 468, 420, 156, 88 }, { 78, 44 });
-	default_animation.addFrame(1, { 312, 420, 156, 88 }, { 78, 44 });
-	default_animation.addFrame(1, { 156, 420, 156, 88 }, { 78, 44 });
+	default_animation.addFrame(1, global_sprites["monsters_blue_winged_0"].texture_rect, { 78, 44 });
+	default_animation.addFrame(1, global_sprites["monsters_blue_winged_1"].texture_rect, { 78, 44 });
+	default_animation.addFrame(1, global_sprites["monsters_blue_winged_2"].texture_rect, { 78, 44 });
+	default_animation.addFrame(1, global_sprites["monsters_blue_winged_3"].texture_rect, { 78, 44 });
+	default_animation.addFrame(1, global_sprites["monsters_blue_winged_4"].texture_rect, { 78, 44 });
+	default_animation.addFrame(1, global_sprites["monsters_blue_winged_3"].texture_rect, { 78, 44 });
+	default_animation.addFrame(1, global_sprites["monsters_blue_winged_2"].texture_rect, { 78, 44 });
+	default_animation.addFrame(1, global_sprites["monsters_blue_winged_1"].texture_rect, { 78, 44 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(0.1));
 	m_animator.play() << thor::Playback::loop("default");
 }
@@ -472,23 +464,21 @@ void BlueWingedMonster::update(sf::Time dt)
 }
 
 TheTerrifyingMonster::TheTerrifyingMonster(sf::Vector2f speed) :
-	Monster(&global_textures["monsters"]),
-	m_animations(new thor::AnimationMap<sf::Sprite, std::string>()),
-	m_animator(*m_animations),
+	Monster(&global_sprites["monsters_the_terrifying_0"].getTexture()),
 	m_speed(speed)
 {
 	m_collision_box_size = sf::Vector2f{ 86, 174 } *m_texture_scale;
 	setScale(m_texture_scale, m_texture_scale);
 	thor::FrameAnimation default_animation;
-	default_animation.addFrame(1, { 126, 510, 126, 174 }, { 63, 87 });
-	default_animation.addFrame(1, { 252, 510, 126, 174 }, { 63, 87 });
-	default_animation.addFrame(1, { 378, 510, 126, 174 }, { 63, 87 });
-	default_animation.addFrame(1, { 504, 510, 134, 174 }, { 67, 87 });
-	default_animation.addFrame(1, { 378, 510, 126, 174 }, { 63, 87 });
-	default_animation.addFrame(1, { 252, 510, 126, 174 }, { 63, 87 });
+	default_animation.addFrame(1, global_sprites["monsters_the_terrifying_0"].texture_rect, { 63, 87 });
+	default_animation.addFrame(1, global_sprites["monsters_the_terrifying_1"].texture_rect, { 63, 87 });
+	default_animation.addFrame(1, global_sprites["monsters_the_terrifying_2"].texture_rect, { 63, 87 });
+	default_animation.addFrame(1, global_sprites["monsters_the_terrifying_3"].texture_rect, { 67, 87 });
+	default_animation.addFrame(1, global_sprites["monsters_the_terrifying_2"].texture_rect, { 63, 87 });
+	default_animation.addFrame(1, global_sprites["monsters_the_terrifying_1"].texture_rect, { 63, 87 });
 	m_animations->addAnimation("default", default_animation, sf::seconds(0.3)); 
 	thor::FrameAnimation hurting_animation;
-	hurting_animation.addFrame(1, { 0, 510, 126, 174 }, { 63, 87 });
+	hurting_animation.addFrame(1, global_sprites["monsters_the_terrifying_4"].texture_rect, { 63, 87 });
 	m_animations->addAnimation("hurting", hurting_animation, sf::seconds(0.1));
 	m_animator.play() << thor::Playback::loop("default");
 }

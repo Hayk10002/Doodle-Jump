@@ -189,12 +189,12 @@ void ImageBackground::update_impl() const
 void ImageBackground::setBackgroundSetGetters(sf::FloatRect background_covering_area)
 {
 	m_background_covering_area = background_covering_area;
-	m_get_background_covering_area = [=]()
+	m_get_background_covering_area = [this]()
 	{
 		return std::pair{ m_background_covering_area, 0.f };
 	};
 
-	m_set_background_covering_area = [&](sf::FloatRect bca)
+	m_set_background_covering_area = [this](sf::FloatRect bca)
 	{
 		m_background_covering_area = bca;
 	};
